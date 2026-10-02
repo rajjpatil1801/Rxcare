@@ -30,6 +30,9 @@ def check_allergy_conflict(patient: PatientProfile, candidate_medicines: List[Di
         'aspirin': ['aspirin', 'ibuprofen', 'naproxen', 'diclofenac'],
         'cephalosporin': ['cephalexin', 'cefuroxime', 'ceftriaxone', 'cefpodoxime'],
         'codeine': ['codeine', 'morphine', 'oxycodone', 'hydrocodone'],
+        'cardiac': ['sildenafil', 'tadalafil', 'vardenafil', 'ergotamine'],
+        'beta blocker': ['propranolol', 'timolol', 'metoprolol', 'atenolol', 'carvedilol', 'nadolol', 'sotalol'],
+        'anticoagulant': ['warfarin', 'apixaban', 'rivaroxaban', 'dabigatran', 'heparin'],
     }
 
     for med in candidate_medicines:
@@ -148,14 +151,174 @@ def check_contraindications(patient: PatientProfile, candidate_medicines: List[D
     active_conditions = [normalize_str(c.condition_name) for c in patient.conditions.filter(status__in=['ACTIVE', 'CHRONIC'])]
 
     contraindication_rules = [
+        # 1. Hypertension (High BP)
         {
-            'conditions': ['asthma', 'copd', 'bronchospasm'],
-            'drug_keywords': ['propranolol', 'atenolol', 'metoprolol', 'carvedilol', 'timolol'],
-            'title': 'Contraindication: Beta-Blockers in Reactive Airway Disease',
+            'conditions': ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+            'drug_keywords': ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+            'title': 'AVOID / CAUTION: NSAID in Hypertension',
             'severity': 'high',
-            'why': 'Non-selective or high-dose beta-blockers can trigger severe bronchospasm in patients with Asthma/COPD.',
-            'recommendation': 'Consider cardioselective beta-1 agents with caution or switch to calcium channel blockers.'
+            'why': 'NSAIDs cause fluid retention and reduced antihypertensive effect. May increase sodium/water retention and raise BP or worsen BP control.',
+            'recommendation': 'Use Paracetamol (Acetaminophen) for analgesia instead. If NSAID is essential, use the lowest dose for the shortest duration and monitor BP closely.'
         },
+        {
+            'conditions': ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+            'drug_keywords': ['pseudoephedrine', 'phenylephrine', 'ephedrine'],
+            'title': 'AVOID: Decongestant in Hypertension',
+            'severity': 'high',
+            'why': 'Sympathomimetic decongestants cause vasoconstriction, raising blood pressure and heart rate significantly.',
+            'recommendation': 'Use non-vasoconstrictive intranasal saline or second-generation antihistamines instead.'
+        },
+        {
+            'conditions': ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+            'drug_keywords': ['ergotamine'],
+            'title': 'CONTRAINDICATED: Ergotamine in Uncontrolled Hypertension',
+            'severity': 'critical',
+            'why': 'Ergot alkaloids cause marked vasoconstriction, which may significantly increase vascular resistance and blood pressure.',
+            'recommendation': 'Use triptans (e.g., Sumatriptan) for migraine management in hypertensive patients instead.'
+        },
+        # 2. Diabetes Mellitus
+        {
+            'conditions': ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+            'drug_keywords': ['prednisolone', 'prednisone', 'dexamethasone', 'methylprednisolone', 'hydrocortisone'],
+            'title': 'AVOID / CAUTION: Corticosteroid in Diabetes',
+            'severity': 'high',
+            'why': 'Corticosteroids increase hepatic glucose production and reduce insulin sensitivity, causing hyperglycemia.',
+            'recommendation': 'Monitor blood glucose closely if corticosteroid is essential. Consider insulin sliding scale adjustment. Use lowest effective dose for shortest duration.'
+        },
+        {
+            'conditions': ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+            'drug_keywords': ['hydrochlorothiazide'],
+            'title': 'CAUTION: Thiazide Diuretic in Diabetes',
+            'severity': 'moderate',
+            'why': 'Thiazide diuretics may cause impaired glucose tolerance and increase blood glucose, particularly at higher doses.',
+            'recommendation': 'Use lowest effective dose (12.5 mg). Monitor fasting glucose regularly. Consider ACE inhibitor or ARB as first-line antihypertensive.'
+        },
+        {
+            'conditions': ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+            'drug_keywords': ['olanzapine', 'clozapine', 'quetiapine'],
+            'title': 'CAUTION / AVOID: Atypical Antipsychotic in Diabetes',
+            'severity': 'high',
+            'why': 'Atypical antipsychotics can worsen glucose regulation, increase insulin resistance, and cause significant weight gain.',
+            'recommendation': 'If antipsychotic needed, prefer agents with lower metabolic risk (e.g., Aripiprazole). Monitor HbA1c and fasting glucose.'
+        },
+        {
+            'conditions': ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+            'drug_keywords': ['niacin'],
+            'title': 'CAUTION: Niacin (Vitamin B3) in Diabetes',
+            'severity': 'moderate',
+            'why': 'High-dose Niacin reduces insulin sensitivity and can increase blood glucose levels.',
+            'recommendation': 'Monitor blood glucose carefully. Consider statin therapy as alternative for lipid management.'
+        },
+        {
+            'conditions': ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+            'drug_keywords': ['salbutamol', 'albuterol'],
+            'title': 'CAUTION: Beta-2 Agonist in Diabetes',
+            'severity': 'moderate',
+            'why': 'Systemic beta-2 stimulation can increase glucose levels via glycogenolysis and gluconeogenesis.',
+            'recommendation': 'Use inhaled route (lower systemic effect). Monitor blood glucose if using nebulized or oral form.'
+        },
+        # 3. Acute Myocardial Infarction (Heart Attack) / Cardiac Risk
+        {
+            'conditions': ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+            'drug_keywords': ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+            'title': 'AVOID / CAUTION: NSAID in Cardiac Risk / MI',
+            'severity': 'high',
+            'why': 'NSAIDs increase thrombotic cardiovascular risk and may worsen outcomes after myocardial infarction.',
+            'recommendation': 'Use Paracetamol or opioid analgesics. Avoid all NSAIDs in the acute and recovery phase of MI.'
+        },
+        {
+            'conditions': ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+            'drug_keywords': ['sildenafil', 'tadalafil', 'vardenafil'],
+            'title': 'CONTRAINDICATED: PDE-5 Inhibitor in Acute MI (with Nitrates)',
+            'severity': 'critical',
+            'why': 'PDE-5 inhibitors potentiate nitrate-mediated vasodilation, causing severe hypotension and dangerous fall in blood pressure.',
+            'recommendation': 'Absolutely contraindicated with concurrent nitrate therapy. Wait at least 24-48 hours after last nitrate dose.'
+        },
+        {
+            'conditions': ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+            'drug_keywords': ['ergotamine'],
+            'title': 'AVOID: Ergotamine in Cardiac Ischemia',
+            'severity': 'high',
+            'why': 'Ergot alkaloids cause vasoconstriction and can worsen myocardial ischemia.',
+            'recommendation': 'Use triptans cautiously or non-vasoactive analgesics for migraine management.'
+        },
+        # 4. Stroke
+        {
+            'conditions': ['stroke', 'cerebrovascular accident', 'cva', 'cerebral hemorrhage', 'intracranial hemorrhage', 'brain hemorrhage'],
+            'drug_keywords': ['alteplase', 'tenecteplase', 'streptokinase'],
+            'title': 'CONTRAINDICATED: Thrombolytic after Recent Intracranial Hemorrhage',
+            'severity': 'critical',
+            'why': 'Thrombolysis can cause or worsen life-threatening intracranial bleeding.',
+            'recommendation': 'Absolutely contraindicated in hemorrhagic stroke. Only use in ischemic stroke within approved time window after imaging confirms no hemorrhage.'
+        },
+        {
+            'conditions': ['stroke', 'cerebrovascular accident', 'cva', 'cerebral hemorrhage', 'intracranial hemorrhage', 'brain hemorrhage'],
+            'drug_keywords': ['warfarin', 'apixaban', 'rivaroxaban', 'dabigatran'],
+            'title': 'CONTRAINDICATED: Anticoagulant in Active Intracranial Bleeding',
+            'severity': 'critical',
+            'why': 'Anticoagulants increase bleeding risk and can worsen active intracranial hemorrhage.',
+            'recommendation': 'Contraindicated in active hemorrhagic stroke. Re-evaluate anticoagulation only after bleeding is fully resolved and imaging is clear.'
+        },
+        # 5. Heart Failure
+        {
+            'conditions': ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure', 'hfref', 'hfpef'],
+            'drug_keywords': ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+            'title': 'AVOID / MAJOR CAUTION: NSAID in Heart Failure',
+            'severity': 'high',
+            'why': 'NSAIDs cause sodium/water retention, worsening renal function and heart failure. Can cause fluid overload and edema.',
+            'recommendation': 'Avoid all NSAIDs. Use Paracetamol for pain. If anti-inflammatory needed, consult cardiology.'
+        },
+        {
+            'conditions': ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure', 'hfref'],
+            'drug_keywords': ['verapamil', 'diltiazem'],
+            'title': 'AVOID: Non-DHP Calcium Channel Blocker in Heart Failure (HFrEF)',
+            'severity': 'high',
+            'why': 'Verapamil and Diltiazem have negative inotropic effects that can reduce cardiac contractility and depress cardiac function in systolic heart failure.',
+            'recommendation': 'Use Amlodipine (DHP CCB) if calcium channel blocker needed, as it has neutral effect on heart failure outcomes.'
+        },
+        {
+            'conditions': ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure', 'hfref', 'hfpef'],
+            'drug_keywords': ['pioglitazone', 'rosiglitazone'],
+            'title': 'CONTRAINDICATED: Thiazolidinedione in Heart Failure',
+            'severity': 'critical',
+            'why': 'Thiazolidinediones cause fluid retention and edema, which can precipitate or worsen heart failure.',
+            'recommendation': 'Absolutely avoid in NYHA Class III-IV heart failure. Use Metformin or SGLT2 inhibitors for diabetes management instead.'
+        },
+        # 6. Asthma
+        {
+            'conditions': ['asthma', 'bronchial asthma', 'reactive airway', 'copd', 'bronchospasm'],
+            'drug_keywords': ['propranolol', 'timolol', 'carvedilol', 'nadolol', 'sotalol'],
+            'title': 'CONTRAINDICATED / AVOID: Non-selective Beta-Blocker in Asthma',
+            'severity': 'critical',
+            'why': 'Beta-2 blockade can cause severe bronchospasm and worsen asthma. Even ophthalmic timolol can produce systemic beta-blockade.',
+            'recommendation': 'Avoid all non-selective beta-blockers. If beta-blocker essential, use highly cardioselective agent (Bisoprolol) at lowest dose with close monitoring.'
+        },
+        {
+            'conditions': ['asthma', 'bronchial asthma', 'reactive airway', 'aspirin-sensitive asthma'],
+            'drug_keywords': ['aspirin', 'ketorolac', 'diclofenac', 'ibuprofen', 'naproxen'],
+            'title': 'CONTRAINDICATED / AVOID: NSAID in Aspirin-Sensitive Asthma',
+            'severity': 'high',
+            'why': 'NSAIDs can trigger bronchospasm in susceptible patients via COX-1 inhibition and leukotriene shunting.',
+            'recommendation': 'Avoid all NSAIDs. Use Paracetamol (generally safe) for analgesia. Consider COX-2 selective inhibitor only with specialist guidance.'
+        },
+        # 7. Peptic Ulcer / Active GI Bleeding
+        {
+            'conditions': ['peptic ulcer', 'gastric ulcer', 'duodenal ulcer', 'gi bleed', 'gastrointestinal bleed', 'gastritis', 'upper gi bleeding', 'gerd'],
+            'drug_keywords': ['ibuprofen', 'diclofenac', 'ketorolac', 'naproxen'],
+            'title': 'CONTRAINDICATED / AVOID: NSAID in Peptic Ulcer / GI Bleeding',
+            'severity': 'critical',
+            'why': 'NSAIDs damage gastric mucosa, cause ulceration and significantly increase gastrointestinal bleeding risk.',
+            'recommendation': 'Absolutely avoid. Use Paracetamol for pain. If anti-inflammatory essential, co-prescribe PPI (Pantoprazole) and use lowest dose for shortest duration.'
+        },
+        {
+            'conditions': ['peptic ulcer', 'gastric ulcer', 'duodenal ulcer', 'gi bleed', 'gastrointestinal bleed', 'upper gi bleeding'],
+            'drug_keywords': ['aspirin'],
+            'title': 'CONTRAINDICATED: Aspirin in Active GI Bleeding',
+            'severity': 'critical',
+            'why': 'Aspirin inhibits platelet aggregation and can worsen active gastrointestinal bleeding significantly.',
+            'recommendation': 'Discontinue during active bleeding. Resume only after bleeding resolves and with PPI cover, if cardiovascular benefit outweighs risk.'
+        },
+        # CKD rules (existing logic preserved)
         {
             'conditions': ['chronic kidney disease', 'renal failure', 'renal impairment', 'ckd', 'nephropathy'],
             'drug_keywords': ['metformin', 'ibuprofen', 'naproxen', 'ketorolac', 'diclofenac'],
@@ -164,22 +327,6 @@ def check_contraindications(patient: PatientProfile, candidate_medicines: List[D
             'why': 'Agent requires renal excretion or induces prostaglandin inhibition, worsening renal filtration rate.',
             'recommendation': 'Check eGFR. If eGFR < 30 mL/min, avoid drug; if 30-45 mL/min, dose reduction is required.'
         },
-        {
-            'conditions': ['peptic ulcer', 'gastritis', 'gastrointestinal bleed', 'gerd'],
-            'drug_keywords': ['aspirin', 'ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
-            'title': 'Caution: NSAID / Antiplatelet in Peptic Ulcer Disease',
-            'severity': 'moderate',
-            'why': 'NSAIDs compromise gastric mucosal cytoprotection and increase risk of gastrointestinal bleeding or ulcer perforation.',
-            'recommendation': 'Co-prescribe a proton-pump inhibitor (e.g. Pantoprazole) or switch to a gastro-sparing alternative.'
-        },
-        {
-            'conditions': ['hypertension', 'high blood pressure'],
-            'drug_keywords': ['pseudoephedrine', 'phenylephrine', 'ephedrine'],
-            'title': 'Caution: Decongestant in Hypertension',
-            'severity': 'moderate',
-            'why': 'Sympathomimetic agents produce systemic vasoconstriction and may elevate arterial pressure significantly.',
-            'recommendation': 'Use non-vasoconstrictive intranasal saline or antihistamines.'
-        }
     ]
 
     for med in candidate_medicines:

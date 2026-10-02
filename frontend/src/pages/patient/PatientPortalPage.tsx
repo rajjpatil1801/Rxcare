@@ -3,17 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity, FileText, FlaskConical, Calendar, ShieldCheck,
   AlertTriangle, QrCode, Download, Printer, CheckCircle2, User,
-  Heart, Droplet, Eye
+  Heart, Droplet, Eye, MapPin
 } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from 'recharts';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { Patient, Prescription, LabReport, Consent, Appointment } from '../../types';
+import { Patient, Prescription, LabReport, Consent, Appointment, LabTestOrder } from '../../types';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Alert } from '../../components/ui/Alert';
+import { PharmacyLocatorModal } from '../../components/PharmacyLocatorModal';
 
 export const PatientPortalPage: React.FC = () => {
   const { user } = useAuth();
@@ -34,11 +35,13 @@ export const PatientPortalPage: React.FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [labReports, setLabReports] = useState<LabReport[]>([]);
+  const [labTestOrders, setLabTestOrders] = useState<LabTestOrder[]>([]);
   const [consents, setConsents] = useState<Consent[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [trendData, setTrendData] = useState<any[]>([]);
   const [selectedRx, setSelectedRx] = useState<Prescription | null>(null);
   const [qrModalRx, setQrModalRx] = useState<Prescription | null>(null);
+  const [mapModalRx, setMapModalRx] = useState<Prescription | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Sync tab with URL changes
@@ -56,16 +59,20 @@ export const PatientPortalPage: React.FC = () => {
         patientsList[0];
 
       if (currentPat) {
-        setPatient(currentPat);
-        const [rxList, labsList, consentList, apptList, trends] = await Promise.all([
-          api.getPrescriptions(currentPat.id),
-          api.getLabReports(currentPat.id),
-          api.getConsents(currentPat.id),
-          api.getAppointments(currentPat.id),
-          api.getLabTrends(currentPat.id),
+        // Fetch full patient profile to ensure conditions, allergies, and vitals are fully populated
+        const fullPat = await api.getPatient(currentPat.id);
+        setPatient(fullPat);
+        const [rxList, labsList, consentList, apptList, trends, labOrdersList] = await Promise.all([
+          api.getPrescriptions(fullPat.id),
+          api.getLabReports(fullPat.id),
+          api.getConsents(fullPat.id),
+          api.getAppointments(fullPat.id),
+          api.getLabTrends(fullPat.id),
+          api.getLabTestOrders(fullPat.id),
         ]);
         setPrescriptions(rxList);
         setLabReports(labsList);
+        setLabTestOrders(labOrdersList);
         setConsents(consentList);
         setAppointments(apptList);
         setTrendData(trends);
@@ -174,7 +181,11 @@ export const PatientPortalPage: React.FC = () => {
                 <Heart className="w-3.5 h-3.5 text-sky-600" />
                 <span className="text-[10px] font-bold uppercase">Blood Pressure</span>
               </div>
-              <span className="text-lg font-bold text-slate-900">128/84</span>
+              <span className="text-lg font-bold text-slate-900">
+                {patient?.latest_vitals?.blood_pressure_sys && patient?.latest_vitals?.blood_pressure_dia 
+                  ? `${patient.latest_vitals.blood_pressure_sys}/${patient.latest_vitals.blood_pressure_dia}`
+                  : '--'}
+              </span>
               <span className="text-[10px] text-slate-400 ml-1">mmHg</span>
             </div>
 
@@ -183,7 +194,9 @@ export const PatientPortalPage: React.FC = () => {
                 <Activity className="w-3.5 h-3.5 text-emerald-600" />
                 <span className="text-[10px] font-bold uppercase">Heart Rate</span>
               </div>
-              <span className="text-lg font-bold text-slate-900">74</span>
+              <span className="text-lg font-bold text-slate-900">
+                {patient?.latest_vitals?.heart_rate ?? '--'}
+              </span>
               <span className="text-[10px] text-slate-400 ml-1">bpm</span>
             </div>
 
@@ -192,7 +205,9 @@ export const PatientPortalPage: React.FC = () => {
                 <Droplet className="w-3.5 h-3.5 text-amber-600" />
                 <span className="text-[10px] font-bold uppercase">Blood Sugar</span>
               </div>
-              <span className="text-lg font-bold text-slate-900">124</span>
+              <span className="text-lg font-bold text-slate-900">
+                {patient?.latest_vitals?.blood_glucose ?? '--'}
+              </span>
               <span className="text-[10px] text-slate-400 ml-1">mg/dL</span>
             </div>
 
@@ -201,7 +216,9 @@ export const PatientPortalPage: React.FC = () => {
                 <User className="w-3.5 h-3.5 text-purple-600" />
                 <span className="text-[10px] font-bold uppercase">BMI</span>
               </div>
-              <span className="text-lg font-bold text-slate-900">{patient?.bmi || 25.3}</span>
+              <span className="text-lg font-bold text-slate-900">
+                {patient?.latest_vitals?.bmi || patient?.bmi || '--'}
+              </span>
               <span className="text-[10px] text-slate-400 ml-1">kg/m²</span>
             </div>
           </div>
@@ -215,31 +232,66 @@ export const PatientPortalPage: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Conditions</span>
-                <div className="font-semibold text-slate-800 space-y-0.5">
-                  <p>• Type 2 Diabetes</p>
-                  <p>• Essential Hypertension</p>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">
+                  Conditions ({patient?.conditions?.length || 0})
+                </span>
+                <div className="font-semibold text-slate-800 space-y-1">
+                  {patient?.conditions && patient.conditions.length > 0 ? (
+                    patient.conditions.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between gap-1">
+                        <span className="truncate">• {c.condition_name}</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-100 text-blue-700 shrink-0">
+                          {c.status}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 font-normal">No documented chronic conditions</p>
+                  )}
                 </div>
               </div>
 
               <div className="p-3 bg-rose-50/60 rounded-lg border border-rose-200">
-                <span className="text-rose-800 block text-[10px] uppercase font-bold mb-1">Allergies</span>
-                <p className="font-bold text-rose-700">Penicillin — HIGH</p>
-                <p className="text-[11px] text-rose-600">Cutaneous urticaria & angioedema</p>
+                <span className="text-rose-800 block text-[10px] uppercase font-bold mb-1">
+                  Allergies ({patient?.allergies?.length || 0})
+                </span>
+                {patient?.allergies && patient.allergies.length > 0 ? (
+                  patient.allergies.map((a) => (
+                    <div key={a.id} className="mb-1.5 last:mb-0">
+                      <p className="font-bold text-rose-700">{a.substance} — {a.severity}</p>
+                      {a.reaction && <p className="text-[11px] text-rose-600 truncate">{a.reaction}</p>}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-500 font-normal">NKDA (No known drug allergies)</p>
+                )}
               </div>
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Current Medicines</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Latest Prescribed Medicines</span>
                 <div className="font-semibold text-slate-800 space-y-0.5">
-                  <p>• Metformin 500 mg BID</p>
-                  <p>• Amlodipine 5 mg OD</p>
+                  {prescriptions.length > 0 && prescriptions[0].items && prescriptions[0].items.length > 0 ? (
+                    prescriptions[0].items.slice(0, 2).map((item, idx) => (
+                      <p key={idx} className="truncate">• {item.generic_name} {item.dosage}</p>
+                    ))
+                  ) : (
+                    <p className="text-slate-400 font-normal">No active medications</p>
+                  )}
                 </div>
               </div>
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
                 <span className="text-slate-400 block text-[10px] uppercase font-bold mb-1">Latest Lab Result</span>
-                <p className="font-semibold text-slate-800">Fasting Glucose: 124 mg/dL</p>
-                <p className="text-[11px] text-slate-500">HbA1c: 7.2% • 23 Sep 2026</p>
+                {labReports.length > 0 && labReports[0].results && labReports[0].results.length > 0 ? (
+                  <div>
+                    <p className="font-semibold text-slate-800">
+                      {labReports[0].results[0].test_name}: {labReports[0].results[0].value} {labReports[0].results[0].unit}
+                    </p>
+                    <p className="text-[11px] text-slate-500">{labReports[0].report_title} • {labReports[0].report_date}</p>
+                  </div>
+                ) : (
+                  <p className="text-slate-400 font-normal">No recent lab findings</p>
+                )}
               </div>
 
               <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 sm:col-span-2">
@@ -247,7 +299,7 @@ export const PatientPortalPage: React.FC = () => {
                 <p className="font-semibold text-slate-800">
                   {appointments.length > 0
                     ? `${appointments[0].appointment_type} with ${appointments[0].doctor_name}`
-                    : 'Cardiology Follow-up with Dr. Rahul Mehta'}
+                    : 'No upcoming appointments scheduled'}
                 </p>
                 <p className="text-[11px] text-slate-500">Metro Heart & Healthcare Institute</p>
               </div>
@@ -258,43 +310,47 @@ export const PatientPortalPage: React.FC = () => {
           <Card>
             <CardHeader
               title="Current Active Medications"
-              subtitle="Medications prescribed for ongoing chronic management"
+              subtitle="Medications prescribed for ongoing management"
             />
             <div className="divide-y divide-slate-100 text-xs">
-              <div className="py-2.5 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-slate-900 block">Metformin Hydrochloride (Glucophage)</span>
-                  <span className="text-slate-500">500 mg • Twice daily with meals</span>
-                </div>
-                <Badge variant="blue" size="sm">Active</Badge>
-              </div>
-              <div className="py-2.5 flex items-center justify-between">
-                <div>
-                  <span className="font-bold text-slate-900 block">Amlodipine Besylate (Norvasc)</span>
-                  <span className="text-slate-500">5 mg • Once daily in morning</span>
-                </div>
-                <Badge variant="blue" size="sm">Active</Badge>
-              </div>
+              {prescriptions.length > 0 && prescriptions.some(rx => rx.items && rx.items.length > 0) ? (
+                prescriptions.slice(0, 3).flatMap(rx => rx.items).slice(0, 4).map((item, idx) => (
+                  <div key={idx} className="py-2.5 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-slate-900 block">{item.generic_name}</span>
+                      <span className="text-slate-500">{item.dosage} • {item.frequency}</span>
+                    </div>
+                    <Badge variant="blue" size="sm">Active</Badge>
+                  </div>
+                ))
+              ) : (
+                <p className="py-4 text-center text-slate-400">No active medications prescribed.</p>
+              )}
             </div>
           </Card>
 
           {/* Allergies & High-Alert Sensitivities */}
           <Card className="border-rose-200 bg-rose-50/20">
             <CardHeader
-              title="Allergies & High-Alert Sensitivities"
+              title={`Allergies & High-Alert Sensitivities (${patient?.allergies?.length || 0})`}
               subtitle="Recorded in EHR to prevent adverse clinical events"
             />
             <div className="space-y-2 text-xs">
-              <div className="p-3 rounded-lg bg-white border border-rose-200 flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold text-slate-900">Penicillin (High Severity)</span>
-                  <p className="text-slate-600 mt-0.5">Reaction: Cutaneous urticaria & angioedema</p>
-                  <p className="text-[11px] text-rose-700 mt-0.5">
-                    Contraindicated: Amoxicillin, Ampicillin, Augmentin, Penicillin V
-                  </p>
+              {patient?.allergies && patient.allergies.length > 0 ? (
+                patient.allergies.map((a) => (
+                  <div key={a.id} className="p-3 rounded-lg bg-white border border-rose-200 flex items-start gap-2.5">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold text-slate-900">{a.substance} ({a.severity} Severity)</span>
+                      {a.reaction && <p className="text-slate-600 mt-0.5">Reaction: {a.reaction}</p>}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-4 text-center bg-white rounded-lg border border-slate-200 text-slate-400">
+                  No documented allergies or adverse reactions on record.
                 </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>
@@ -350,6 +406,14 @@ export const PatientPortalPage: React.FC = () => {
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => setMapModalRx(rx)}
+                            leftIcon={<MapPin className="w-3.5 h-3.5" />}
+                          >
+                            Locate
+                          </Button>
+                          <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedRx(rx)}
@@ -390,41 +454,103 @@ export const PatientPortalPage: React.FC = () => {
 
       {/* TAB 3: LAB REPORTS */}
       {activeTab === 'labs' && (
-        <Card>
-          <CardHeader
-            title="My Diagnostic Lab Reports"
-            subtitle="Analyte findings uploaded by diagnostic laboratories"
-          />
-
-          <div className="divide-y divide-slate-100 text-xs">
-            {labReports.length === 0 ? (
-              <p className="py-8 text-center text-slate-400">No lab reports found.</p>
-            ) : (
-              labReports.map((r) => (
-                <div key={r.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{r.report_title}</h4>
-                    <p className="text-slate-500 mt-0.5">
-                      Date: {r.report_date} • Specimen: {r.specimen_type} • Lab: {r.laboratory_name}
-                    </p>
-                    {r.results && r.results.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {r.results.map((res, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-700">
-                            {res.test_name}: <strong>{res.value} {res.unit}</strong>
-                          </span>
-                        ))}
+        <div className="space-y-6">
+          {/* Diagnostic Orders */}
+          <Card>
+            <CardHeader
+              title="Doctor's Suggested Tests"
+              subtitle="Diagnostic lab tests requested by your doctor"
+            />
+            <div className="divide-y divide-slate-100 text-xs">
+              {labTestOrders.length === 0 ? (
+                <p className="py-8 text-center text-slate-400">No pending lab test orders.</p>
+              ) : (
+                labTestOrders.map((order) => (
+                  <div key={order.id} className="py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                      <div>
+                        <h4 className="font-bold text-slate-900 text-sm">Lab Order #{order.id}</h4>
+                        <p className="text-slate-500 mt-0.5">
+                          Ordered by {order.ordered_by_name} on {new Date(order.created_at).toLocaleDateString()}
+                        </p>
                       </div>
+                      <Badge
+                        variant={
+                          order.status === 'COMPLETED' ? 'green' :
+                          order.status === 'IN_PROGRESS' ? 'amber' :
+                          order.status === 'CANCELLED' ? 'red' : 'blue'
+                        }
+                        size="sm"
+                      >
+                        {order.status}
+                      </Badge>
+                    </div>
+                    {order.notes && (
+                      <p className="text-slate-600 mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+                        <span className="font-semibold">Doctor's Notes:</span> {order.notes}
+                      </p>
                     )}
+                    <div className="space-y-2">
+                      {order.items.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border border-slate-200">
+                          <FlaskConical className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-bold text-slate-800">{item.test_name}</p>
+                            <p className="text-slate-500 text-[11px]">{item.clinical_scenario}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <Badge variant={r.status === 'NORMAL' ? 'green' : 'amber'} size="sm">
-                    {r.status}
-                  </Badge>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
+                ))
+              )}
+            </div>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="My Completed Lab Reports"
+              subtitle="Analyte findings uploaded by diagnostic laboratories"
+            />
+
+            <div className="divide-y divide-slate-100 text-xs">
+              {labReports.length === 0 ? (
+                <p className="py-8 text-center text-slate-400">No completed lab reports found.</p>
+              ) : (
+                labReports.map((r) => (
+                  <div key={r.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm">{r.report_title}</h4>
+                      <p className="text-slate-500 mt-0.5">
+                        Date: {r.report_date} • Specimen: {r.specimen_type} • Lab: {r.laboratory_name}
+                      </p>
+                      {r.file_attachment && (
+                        <div className="mt-1">
+                          <a href={r.file_attachment} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline text-xs font-semibold inline-flex items-center gap-1">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            View PDF Report
+                          </a>
+                        </div>
+                      )}
+                      {r.results && r.results.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {r.results.map((res, i) => (
+                            <span key={i} className="px-2 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-700">
+                              {res.test_name}: <strong>{res.value} {res.unit}</strong>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <Badge variant={r.status === 'NORMAL' ? 'green' : 'amber'} size="sm">
+                      {r.status}
+                    </Badge>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* TAB 4: APPOINTMENTS */}
@@ -601,6 +727,13 @@ export const PatientPortalPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Map Locator Modal */}
+      <PharmacyLocatorModal 
+        isOpen={!!mapModalRx}
+        onClose={() => setMapModalRx(null)}
+        prescription={mapModalRx}
+      />
     </div>
   );
 };

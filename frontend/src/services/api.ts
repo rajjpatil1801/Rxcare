@@ -2,7 +2,7 @@ import {
   User, Patient, Medicine, MedicineInteraction, Prescription,
   SafetyCheckResult, AIClinicalInsight, Pharmacy, Appointment,
   Consent, NotificationItem, MessageItem, AuditLogItem, LabReport,
-  GlobalSearchResultItem
+  GlobalSearchResultItem, LabTestOrder
 } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:8000/api';
@@ -123,6 +123,29 @@ class ApiService {
     });
   }
 
+  async addVital(data: {
+    patient: number;
+    blood_pressure_sys: number;
+    blood_pressure_dia: number;
+    heart_rate: number;
+    blood_glucose?: number;
+    bmi?: number;
+    weight_kg?: number;
+    height_cm?: number;
+    temperature_f?: number;
+    spo2?: number;
+    notes?: string;
+  }): Promise<any> {
+    return this.request('/vitals/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getPatientVitals(patientId: number): Promise<any[]> {
+    return this.request<any[]>(`/vitals/?patient=${patientId}`);
+  }
+
   async getPatientMedicalHistory(patientId: number): Promise<any[]> {
     return this.request<any[]>(`/medical-history/?patient=${patientId}`);
   }
@@ -140,9 +163,51 @@ class ApiService {
     });
   }
 
+  async uploadLabReport(patientId: number, orderId: number, file: File): Promise<LabReport> {
+    const formData = new FormData();
+    formData.append('patient', patientId.toString());
+    formData.append('order_id', orderId.toString());
+    formData.append('file', file);
+
+    const token = this.getToken();
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Token ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/lab-reports/`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || errorData.error || 'Request failed');
+    }
+    return response.json();
+  }
+
   async getLabTrends(patientId?: number): Promise<any[]> {
     const q = patientId ? `?patient=${patientId}` : '';
     return this.request<any[]>(`/lab-trends/${q}`);
+  }
+
+  // --- Lab Test Orders ---
+  async createLabTestOrder(data: {
+    patient: number;
+    notes?: string;
+    items: Array<{ case_code: string; test_name: string; clinical_scenario: string }>;
+  }): Promise<LabTestOrder> {
+    return this.request<LabTestOrder>('/lab-test-orders/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getLabTestOrders(patientId?: number): Promise<LabTestOrder[]> {
+    const q = patientId ? `?patient=${patientId}` : '';
+    return this.request<LabTestOrder[]>(`/lab-test-orders/${q}`);
   }
 
   // --- Medicines ---
@@ -241,10 +306,11 @@ class ApiService {
   }
 
   // --- Pharmacies & Inventory ---
-  async getNearbyPharmacies(medicineId?: number, medicineName?: string): Promise<Pharmacy[]> {
+  async getNearbyPharmacies(medicineId?: number, medicineName?: string, prescriptionId?: number): Promise<Pharmacy[]> {
     const params = new URLSearchParams();
     if (medicineId) params.append('medicine_id', medicineId.toString());
     if (medicineName) params.append('name', medicineName);
+    if (prescriptionId) params.append('prescription_id', prescriptionId.toString());
     const q = params.toString() ? `?${params.toString()}` : '';
     return this.request<Pharmacy[]>(`/pharmacies/${q}`);
   }

@@ -68,6 +68,127 @@ export const CreatePrescriptionPage: React.FC = () => {
   const [finalizedRx, setFinalizedRx] = useState<Prescription | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Real-time contraindication warning when selecting medicine
+  interface ContraindicationWarning {
+    severity: 'critical' | 'high' | 'moderate';
+    title: string;
+    why: string;
+    recommendation: string;
+    matchedCondition: string;
+  }
+  const [liveWarnings, setLiveWarnings] = useState<ContraindicationWarning[]>([]);
+
+  // Comprehensive disease-drug contraindication rules from NABL clinical reference
+  const CONTRAINDICATION_RULES = [
+    // 1. Hypertension
+    { conditions: ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+      drugs: ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+      severity: 'high' as const, title: 'AVOID / CAUTION: NSAID in Hypertension',
+      why: 'NSAIDs cause fluid retention and reduced antihypertensive effect. May worsen BP control.',
+      recommendation: 'Use Paracetamol instead. If NSAID essential, use lowest dose and monitor BP.' },
+    { conditions: ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+      drugs: ['pseudoephedrine', 'phenylephrine', 'ephedrine'],
+      severity: 'high' as const, title: 'AVOID: Decongestant in Hypertension',
+      why: 'Sympathomimetic decongestants cause vasoconstriction, raising blood pressure significantly.',
+      recommendation: 'Use intranasal saline or antihistamines instead.' },
+    { conditions: ['hypertension', 'high blood pressure', 'htn', 'high bp'],
+      drugs: ['ergotamine'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Ergotamine in Hypertension',
+      why: 'Ergot alkaloids cause marked vasoconstriction, significantly increasing vascular resistance and BP.',
+      recommendation: 'Use triptans (e.g., Sumatriptan) for migraine instead.' },
+    // 2. Diabetes
+    { conditions: ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+      drugs: ['prednisolone', 'prednisone', 'dexamethasone'],
+      severity: 'high' as const, title: 'AVOID / CAUTION: Corticosteroid in Diabetes',
+      why: 'Corticosteroids increase hepatic glucose production and reduce insulin sensitivity, causing hyperglycemia.',
+      recommendation: 'Monitor glucose closely. Use lowest dose for shortest duration. Adjust insulin if needed.' },
+    { conditions: ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+      drugs: ['hydrochlorothiazide'],
+      severity: 'moderate' as const, title: 'CAUTION: Thiazide Diuretic in Diabetes',
+      why: 'Thiazide diuretics may impair glucose tolerance, particularly at higher doses.',
+      recommendation: 'Use lowest dose (12.5 mg). Monitor fasting glucose regularly.' },
+    { conditions: ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+      drugs: ['olanzapine', 'clozapine'],
+      severity: 'high' as const, title: 'CAUTION / AVOID: Atypical Antipsychotic in Diabetes',
+      why: 'Can worsen glucose regulation, increase insulin resistance, and cause weight gain.',
+      recommendation: 'Prefer Aripiprazole if antipsychotic needed. Monitor HbA1c and fasting glucose.' },
+    { conditions: ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+      drugs: ['niacin'],
+      severity: 'moderate' as const, title: 'CAUTION: Niacin (Vitamin B3) in Diabetes',
+      why: 'High-dose Niacin reduces insulin sensitivity and can increase blood glucose.',
+      recommendation: 'Monitor glucose carefully. Consider statins as alternative for lipid management.' },
+    { conditions: ['diabetes', 'diabetes mellitus', 'type 2 diabetes', 'type 1 diabetes', 'dm', 'diabetic'],
+      drugs: ['salbutamol', 'albuterol'],
+      severity: 'moderate' as const, title: 'CAUTION: Beta-2 Agonist in Diabetes',
+      why: 'Systemic beta-2 stimulation can increase glucose via glycogenolysis.',
+      recommendation: 'Use inhaled route. Monitor blood glucose if using nebulized/oral form.' },
+    // 3. MI / Cardiac Risk
+    { conditions: ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+      drugs: ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+      severity: 'high' as const, title: 'AVOID: NSAID in Cardiac Risk / MI',
+      why: 'NSAIDs increase thrombotic cardiovascular risk and may worsen outcomes after MI.',
+      recommendation: 'Use Paracetamol or opioid analgesics instead.' },
+    { conditions: ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+      drugs: ['sildenafil', 'tadalafil', 'vardenafil'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: PDE-5 Inhibitor with Nitrates / Acute MI',
+      why: 'Potentiates nitrate-mediated vasodilation, causing severe hypotension and dangerous BP drop.',
+      recommendation: 'Absolutely contraindicated with concurrent nitrate therapy.' },
+    { conditions: ['myocardial infarction', 'heart attack', 'acute mi', 'mi', 'acs', 'acute coronary', 'cardiac risk', 'cardiac'],
+      drugs: ['ergotamine'],
+      severity: 'high' as const, title: 'AVOID: Ergotamine in Cardiac Ischemia',
+      why: 'Ergot alkaloids cause vasoconstriction and can worsen myocardial ischemia.',
+      recommendation: 'Use non-vasoactive analgesics for migraine management.' },
+    // 4. Stroke
+    { conditions: ['stroke', 'cerebrovascular accident', 'cva', 'cerebral hemorrhage', 'intracranial hemorrhage'],
+      drugs: ['alteplase', 'tenecteplase'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Thrombolytic in Hemorrhagic Stroke',
+      why: 'Thrombolysis can cause or worsen life-threatening intracranial bleeding.',
+      recommendation: 'Only use in ischemic stroke after imaging confirms no hemorrhage.' },
+    { conditions: ['stroke', 'cerebrovascular accident', 'cva', 'cerebral hemorrhage', 'intracranial hemorrhage'],
+      drugs: ['warfarin', 'apixaban', 'rivaroxaban', 'dabigatran'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Anticoagulant in Active Intracranial Bleeding',
+      why: 'Anticoagulants increase bleeding risk and can worsen active intracranial hemorrhage.',
+      recommendation: 'Contraindicated in hemorrhagic stroke. Re-evaluate only after bleeding resolves.' },
+    // 5. Heart Failure
+    { conditions: ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure'],
+      drugs: ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac'],
+      severity: 'high' as const, title: 'AVOID: NSAID in Heart Failure',
+      why: 'NSAIDs cause sodium/water retention, worsening renal function and heart failure.',
+      recommendation: 'Avoid all NSAIDs. Use Paracetamol for pain.' },
+    { conditions: ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure'],
+      drugs: ['verapamil', 'diltiazem'],
+      severity: 'high' as const, title: 'AVOID: Non-DHP CCB in Heart Failure (HFrEF)',
+      why: 'Negative inotropic effects can reduce cardiac contractivity and depress cardiac function.',
+      recommendation: 'Use Amlodipine (DHP CCB) if calcium channel blocker needed.' },
+    { conditions: ['heart failure', 'chf', 'congestive heart failure', 'hf', 'cardiac failure'],
+      drugs: ['pioglitazone', 'rosiglitazone'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Thiazolidinedione in Heart Failure',
+      why: 'Thiazolidinediones cause fluid retention and edema, worsening heart failure.',
+      recommendation: 'Avoid in NYHA Class III-IV HF. Use Metformin or SGLT2 inhibitors instead.' },
+    // 6. Asthma
+    { conditions: ['asthma', 'bronchial asthma', 'reactive airway', 'copd', 'bronchospasm'],
+      drugs: ['propranolol', 'timolol', 'carvedilol', 'nadolol', 'sotalol'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Non-selective Beta-Blocker in Asthma',
+      why: 'Beta-2 blockade can cause severe bronchospasm and worsen asthma.',
+      recommendation: 'Avoid all non-selective beta-blockers. Use cardioselective agent (Bisoprolol) if essential.' },
+    { conditions: ['asthma', 'bronchial asthma', 'reactive airway'],
+      drugs: ['aspirin', 'ketorolac', 'diclofenac', 'ibuprofen', 'naproxen'],
+      severity: 'high' as const, title: 'AVOID: NSAID in Aspirin-Sensitive Asthma',
+      why: 'NSAIDs can trigger bronchospasm in susceptible patients via COX-1 inhibition.',
+      recommendation: 'Avoid all NSAIDs. Use Paracetamol for analgesia.' },
+    // 7. Peptic Ulcer / GI Bleeding
+    { conditions: ['peptic ulcer', 'gastric ulcer', 'duodenal ulcer', 'gi bleed', 'gastrointestinal bleed', 'gastritis', 'gerd'],
+      drugs: ['ibuprofen', 'diclofenac', 'ketorolac', 'naproxen'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: NSAID in Peptic Ulcer / GI Bleeding',
+      why: 'NSAIDs damage gastric mucosa, cause ulceration and increase GI bleeding risk.',
+      recommendation: 'Absolutely avoid. Use Paracetamol. If essential, co-prescribe PPI (Pantoprazole).' },
+    { conditions: ['peptic ulcer', 'gastric ulcer', 'duodenal ulcer', 'gi bleed', 'gastrointestinal bleed'],
+      drugs: ['aspirin'],
+      severity: 'critical' as const, title: 'CONTRAINDICATED: Aspirin in Active GI Bleeding',
+      why: 'Aspirin inhibits platelet aggregation and can worsen active GI bleeding significantly.',
+      recommendation: 'Discontinue during active bleeding. Resume only with PPI cover if cardiovascular benefit outweighs risk.' },
+  ];
+
   // Initial Load: Patients and Medicine catalogue
   useEffect(() => {
     const initData = async () => {
@@ -96,6 +217,61 @@ export const CreatePrescriptionPage: React.FC = () => {
     initData();
   }, [searchParams]);
 
+  // Real-time contraindication checker against patient's conditions & allergies
+  const checkContraindications = (drugGenericName: string) => {
+    if (!selectedPatient) { setLiveWarnings([]); return; }
+    const drugLower = drugGenericName.toLowerCase();
+    const warnings: ContraindicationWarning[] = [];
+
+    // Gather patient conditions and allergies (both are relevant triggers)
+    const patientConditions = (selectedPatient.conditions || []).map((c: any) => (c.condition_name || '').toLowerCase());
+    const patientAllergies = (selectedPatient.allergies || []).map((a: any) => (a.substance || '').toLowerCase());
+    const allTriggers = [...patientConditions, ...patientAllergies];
+
+    for (const rule of CONTRAINDICATION_RULES) {
+      // Does the drug match?
+      const drugMatches = rule.drugs.some(d => drugLower.includes(d));
+      if (!drugMatches) continue;
+
+      // Does the patient have a matching condition/allergy?
+      for (const trigger of allTriggers) {
+        const conditionMatches = rule.conditions.some(c => trigger.includes(c) || c.includes(trigger));
+        if (conditionMatches) {
+          warnings.push({
+            severity: rule.severity,
+            title: rule.title,
+            why: rule.why,
+            recommendation: rule.recommendation,
+            matchedCondition: trigger,
+          });
+          break; // one match per rule is enough
+        }
+      }
+    }
+
+    // Also check for cardiac risk markers in allergies (automated extraction from lab reports)
+    const cardiacKeywords = ['cardiac', 'troponin', 'nt-probnp', 'ck-mb', 'hs-crp', 'heart', 'coronary', 'mi'];
+    const hasCardiacRisk = allTriggers.some(t => cardiacKeywords.some(k => t.includes(k)));
+    if (hasCardiacRisk) {
+      const cardiacDangerDrugs = ['ibuprofen', 'naproxen', 'diclofenac', 'ketorolac', 'sildenafil', 'tadalafil', 'vardenafil', 'ergotamine'];
+      if (cardiacDangerDrugs.some(d => drugLower.includes(d))) {
+        // Check we haven't already added a similar warning
+        const alreadyWarned = warnings.some(w => w.title.includes('Cardiac') || w.title.includes('MI'));
+        if (!alreadyWarned) {
+          warnings.push({
+            severity: drugLower.includes('sildenafil') || drugLower.includes('tadalafil') || drugLower.includes('vardenafil') ? 'critical' : 'high',
+            title: `⚠️ Cardiac Risk Alert: ${drugGenericName} — Patient has Cardiac Risk Markers`,
+            why: 'Patient has documented cardiac risk markers (hs-CRP, Troponin-I, NT-proBNP, CK-MB). This medication may worsen cardiovascular outcomes.',
+            recommendation: 'Consult cardiology before prescribing. Consider safer alternative medications.',
+            matchedCondition: 'Cardiac Risk Markers (Lab-detected)',
+          });
+        }
+      }
+    }
+
+    setLiveWarnings(warnings);
+  };
+
   // Handle Medicine catalog selection in form
   const handleSelectCatalogMed = (medId: string) => {
     const med = availableMedicines.find((m) => m.id === Number(medId));
@@ -111,6 +287,10 @@ export const CreatePrescriptionPage: React.FC = () => {
         instructions: 'Take as directed',
         allergy_class: med.allergy_class,
       });
+      // Trigger real-time contraindication check
+      checkContraindications(med.generic_name);
+    } else {
+      setLiveWarnings([]);
     }
   };
 
@@ -118,6 +298,7 @@ export const CreatePrescriptionPage: React.FC = () => {
     e.preventDefault();
     if (!itemForm.generic_name.trim()) return;
     setSelectedItems([...selectedItems, itemForm]);
+    setLiveWarnings([]);
     // Reset form for next item
     setItemForm({
       generic_name: '',
@@ -504,7 +685,7 @@ export const CreatePrescriptionPage: React.FC = () => {
                   onChange={(e) => handleSelectCatalogMed(e.target.value)}
                   value={itemForm.medicine_id || ''}
                 >
-                  <option value="">-- Choose from 20+ Catalogue Drugs --</option>
+                  <option value="">-- Choose from 40+ Catalogue Drugs --</option>
                   {availableMedicines.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.generic_name} ({m.brand_name}) - {m.strength}
@@ -520,6 +701,57 @@ export const CreatePrescriptionPage: React.FC = () => {
                   required
                 />
               </div>
+
+              {/* 🔴 REAL-TIME CONTRAINDICATION WARNINGS */}
+              {liveWarnings.length > 0 && (
+                <div className="space-y-2 animate-in fade-in">
+                  {liveWarnings.map((w, i) => (
+                    <div
+                      key={i}
+                      className={`p-3.5 rounded-xl border-2 flex items-start gap-3 ${
+                        w.severity === 'critical'
+                          ? 'bg-rose-50 border-rose-400 shadow-rose-100 shadow-md'
+                          : w.severity === 'high'
+                          ? 'bg-amber-50 border-amber-400 shadow-amber-100 shadow-sm'
+                          : 'bg-yellow-50 border-yellow-300'
+                      }`}
+                    >
+                      <div className="shrink-0 mt-0.5">
+                        <ShieldAlert className={`w-5 h-5 ${
+                          w.severity === 'critical' ? 'text-rose-600' : w.severity === 'high' ? 'text-amber-600' : 'text-yellow-600'
+                        }`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            w.severity === 'critical'
+                              ? 'bg-rose-600 text-white'
+                              : w.severity === 'high'
+                              ? 'bg-amber-600 text-white'
+                              : 'bg-yellow-500 text-white'
+                          }`}>
+                            {w.severity === 'critical' ? '🚫 CONTRAINDICATED' : w.severity === 'high' ? '⚠️ AVOID' : '⚡ CAUTION'}
+                          </span>
+                          <span className="text-[10px] text-slate-500">
+                            Matched: <strong>{w.matchedCondition}</strong>
+                          </span>
+                        </div>
+                        <p className={`text-sm font-bold mt-1 ${
+                          w.severity === 'critical' ? 'text-rose-900' : w.severity === 'high' ? 'text-amber-900' : 'text-yellow-900'
+                        }`}>
+                          {w.title}
+                        </p>
+                        <p className="text-xs text-slate-700 mt-1">
+                          <strong>Why:</strong> {w.why}
+                        </p>
+                        <p className="text-xs text-emerald-800 mt-1 bg-emerald-50 rounded-lg px-2 py-1 inline-block">
+                          <strong>✅ Recommendation:</strong> {w.recommendation}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <Input
@@ -554,6 +786,7 @@ export const CreatePrescriptionPage: React.FC = () => {
                   <option value="Subcutaneous">Subcutaneous</option>
                   <option value="Intravenous">Intravenous</option>
                   <option value="Topical">Topical</option>
+                  <option value="Ophthalmic">Ophthalmic</option>
                 </Select>
               </div>
 

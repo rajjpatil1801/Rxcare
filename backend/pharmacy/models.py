@@ -48,6 +48,9 @@ class Pharmacy(models.Model):
     phone = models.CharField(max_length=30)
     distance_km = models.FloatField(default=0.8)
     rating = models.FloatField(default=4.7)
+    latitude = models.FloatField(default=12.9716)
+    longitude = models.FloatField(default=77.5946)
+    opening_hours = models.CharField(max_length=50, default='8:00 AM - 10:00 PM')
 
     class Meta:
         verbose_name_plural = 'Pharmacies'

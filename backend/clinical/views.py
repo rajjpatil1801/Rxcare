@@ -5,13 +5,13 @@ from django.db.models import Q
 from core.models import PatientProfile, AuditLog, Notification
 from .models import (
     MedicalCondition, MedicalHistory, Allergy, AdverseDrugReaction,
-    Vital, LabReport, LabResult, Appointment, Consent
+    Vital, LabReport, LabResult, Appointment, Consent, LabTestOrder, LabTestOrderItem
 )
 from .serializers import (
     PatientProfileSerializer, MedicalConditionSerializer,
     MedicalHistorySerializer, AllergySerializer, AdverseDrugReactionSerializer,
     VitalSerializer, LabReportSerializer, LabResultSerializer,
-    AppointmentSerializer, ConsentSerializer
+    AppointmentSerializer, ConsentSerializer, LabTestOrderSerializer
 )
 from .fhir_serializers import (
     fhir_patient, fhir_condition, fhir_allergy, fhir_vital_observation, fhir_diagnostic_report
@@ -86,6 +86,18 @@ class MedicalConditionViewSet(viewsets.ModelViewSet):
             return MedicalCondition.objects.filter(patient_id=patient_id)
         return MedicalCondition.objects.all()
 
+    def perform_create(self, serializer):
+        condition = serializer.save()
+        AuditLog.objects.create(
+            actor=self.request.user,
+            actor_name=self.request.user.get_full_name() or self.request.user.username,
+            role=self.request.user.role,
+            action="Condition added",
+            resource_type="MedicalCondition",
+            resource_id=str(condition.id),
+            details=f"Added medical condition '{condition.condition_name}' ({condition.status}) for {condition.patient.full_name}"
+        )
+
 
 class MedicalHistoryViewSet(viewsets.ModelViewSet):
     serializer_class = MedicalHistorySerializer
@@ -142,6 +154,35 @@ class VitalViewSet(viewsets.ModelViewSet):
             return Vital.objects.filter(patient_id=patient_id).order_by('-recorded_at')
         return Vital.objects.all().order_by('-recorded_at')
 
+    def perform_create(self, serializer):
+        vital = serializer.save()
+        patient = vital.patient
+        updated = False
+        if 'weight_kg' in self.request.data and self.request.data['weight_kg'] is not None:
+            try:
+                patient.weight_kg = float(self.request.data['weight_kg'])
+                updated = True
+            except (ValueError, TypeError):
+                pass
+        if 'height_cm' in self.request.data and self.request.data['height_cm'] is not None:
+            try:
+                patient.height_cm = float(self.request.data['height_cm'])
+                updated = True
+            except (ValueError, TypeError):
+                pass
+        if updated:
+            patient.save()
+
+        AuditLog.objects.create(
+            actor=self.request.user,
+            actor_name=self.request.user.get_full_name() or self.request.user.username,
+            role=self.request.user.role,
+            action="Vitals recorded",
+            resource_type="Vital",
+            resource_id=str(vital.id),
+            details=f"Recorded vitals for {patient.full_name}: BP {vital.blood_pressure_sys}/{vital.blood_pressure_dia}, HR {vital.heart_rate} bpm, Glucose {vital.blood_glucose} mg/dL, BMI {vital.bmi}"
+        )
+
 
 class LabReportViewSet(viewsets.ModelViewSet):
     serializer_class = LabReportSerializer
@@ -158,9 +199,54 @@ class LabReportViewSet(viewsets.ModelViewSet):
         return LabReport.objects.all().order_by('-report_date')
 
     def create(self, request, *args, **kwargs):
+        import json
         # Support creating report and multiple nested results at once
         data = request.data.copy()
+        
+        # Handle multipart/form-data json fields if necessary
         results_data = data.pop('results', [])
+        if isinstance(results_data, list) and len(results_data) == 1 and isinstance(results_data[0], str):
+            try:
+                results_data = json.loads(results_data[0])
+            except:
+                pass
+        elif isinstance(results_data, str):
+            try:
+                results_data = json.loads(results_data)
+            except:
+                results_data = []
+        
+        file_obj = request.FILES.get('file')
+        if file_obj:
+            data['file_attachment'] = file_obj
+
+        order_id = data.get('order_id')
+        if order_id:
+            if isinstance(order_id, list):
+                order_id = order_id[0]
+            try:
+                order = LabTestOrder.objects.get(id=order_id)
+                first_item = order.items.first()
+                test_name = first_item.test_name if first_item else f"Lab Order #{order.id}"
+                
+                if 'report_title' not in data:
+                    data['report_title'] = test_name
+                if 'status' not in data:
+                    data['status'] = 'ABNORMAL'
+                if 'patient' not in data:
+                    data['patient'] = order.patient_id
+
+                Allergy.objects.create(
+                    patient=order.patient,
+                    substance=f"{test_name} Findings",
+                    reaction="Automated extraction from Lab Report",
+                    severity="HIGH"
+                )
+
+                order.status = 'COMPLETED'
+                order.save()
+            except LabTestOrder.DoesNotExist:
+                pass
 
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
@@ -301,6 +387,59 @@ class ConsentViewSet(viewsets.ModelViewSet):
             resource_id=str(instance.id),
             details=f"Patient {instance.patient.full_name} set consent status to '{instance.status}' for {instance.provider_name}"
         )
+
+
+class LabTestOrderViewSet(viewsets.ModelViewSet):
+    serializer_class = LabTestOrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'PATIENT' and hasattr(user, 'patient_profile'):
+            return LabTestOrder.objects.filter(patient=user.patient_profile).order_by('-created_at')
+        
+        patient_id = self.request.query_params.get('patient')
+        if patient_id:
+            return LabTestOrder.objects.filter(patient_id=patient_id).order_by('-created_at')
+        return LabTestOrder.objects.all().order_by('-created_at')
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        items_data = data.pop('items', [])
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        order = serializer.save(ordered_by=request.user)
+
+        if isinstance(items_data, list):
+            for i in items_data:
+                LabTestOrderItem.objects.create(
+                    order=order,
+                    case_code=i.get('case_code', ''),
+                    test_name=i.get('test_name', ''),
+                    clinical_scenario=i.get('clinical_scenario', '')
+                )
+
+        AuditLog.objects.create(
+            actor=request.user,
+            actor_name=request.user.get_full_name() or request.user.username,
+            role=request.user.role,
+            action="Lab test order created",
+            resource_type="LabTestOrder",
+            resource_id=str(order.id),
+            details=f"Ordered lab tests for {order.patient.full_name}"
+        )
+
+        if order.patient.user:
+            Notification.objects.create(
+                recipient=order.patient.user,
+                title="New Lab Test Order",
+                message=f"Your doctor has ordered new lab tests.",
+                notification_type=Notification.Type.LAB_REPORT,
+                link=f"/patient/lab-orders"
+            )
+
+        return Response(LabTestOrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
 class FHIRResourceView(APIView):

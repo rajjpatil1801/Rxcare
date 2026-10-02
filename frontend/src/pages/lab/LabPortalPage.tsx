@@ -5,28 +5,11 @@ import {
   Upload, Calendar, Check, AlertTriangle
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { LabReport, Patient } from '../../types';
+import { LabReport, Patient, LabTestOrder } from '../../types';
 import { Card, CardHeader } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Badge } from '../../components/ui/Badge';
-import { Input } from '../../components/ui/Input';
 import { Alert } from '../../components/ui/Alert';
-
-interface TestOption {
-  name: string;
-  defaultUnit: string;
-  defaultRange: string;
-  defaultVal: number;
-}
-
-const DEMO_TESTS: Record<string, TestOption> = {
-  'Glucose': { name: 'Fasting Blood Glucose', defaultUnit: 'mg/dL', defaultRange: '70 - 99', defaultVal: 124 },
-  'HbA1c': { name: 'Glycated Hemoglobin (HbA1c)', defaultUnit: '%', defaultRange: '4.0 - 5.6', defaultVal: 7.2 },
-  'Creatinine': { name: 'Serum Creatinine', defaultUnit: 'mg/dL', defaultRange: '0.7 - 1.2', defaultVal: 1.18 },
-  'Cholesterol': { name: 'Total Cholesterol', defaultUnit: 'mg/dL', defaultRange: '125 - 200', defaultVal: 195 },
-  'ALT': { name: 'Alanine Aminotransferase (ALT)', defaultUnit: 'U/L', defaultRange: '7 - 56', defaultVal: 34 },
-  'CBC': { name: 'Complete Blood Count (Hemoglobin)', defaultUnit: 'g/dL', defaultRange: '13.8 - 17.2', defaultVal: 14.5 },
-};
 
 export const LabPortalPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -38,28 +21,28 @@ export const LabPortalPage: React.FC = () => {
 
   const [reports, setReports] = useState<LabReport[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [allOrders, setAllOrders] = useState<LabTestOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form state for Lab Report Upload
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-  const [selectedTestKey, setSelectedTestKey] = useState<string>('Glucose');
-  const [testResultVal, setTestResultVal] = useState<number>(124);
-  const [testUnit, setTestUnit] = useState<string>('mg/dL');
-  const [referenceRange, setReferenceRange] = useState<string>('70 - 99');
-  const [resultStatus, setResultStatus] = useState<'NORMAL' | 'ABNORMAL' | 'CRITICAL'>('ABNORMAL');
-  const [notes, setNotes] = useState<string>('Serum fasting sample processed within 30 minutes.');
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reportList, patientList] = await Promise.all([
+      const [reportList, patientList, orderList] = await Promise.all([
         api.getLabReports(),
         api.getPatients(),
+        api.getLabTestOrders(), // Need to fetch all orders for the lab, but our API currently fetches all if patient is omitted
       ]);
       setReports(reportList);
       setPatients(patientList);
+      setAllOrders(orderList.filter(o => o.status !== 'COMPLETED' && o.status !== 'CANCELLED'));
       if (patientList.length > 0 && !selectedPatientId) {
         setSelectedPatientId(patientList[0].id.toString());
       }
@@ -74,51 +57,25 @@ export const LabPortalPage: React.FC = () => {
     loadData();
   }, []);
 
-  const handleTestSelectionChange = (key: string) => {
-    setSelectedTestKey(key);
-    const test = DEMO_TESTS[key];
-    if (test) {
-      setTestResultVal(test.defaultVal);
-      setTestUnit(test.defaultUnit);
-      setReferenceRange(test.defaultRange);
-      setResultStatus(key === 'HbA1c' || key === 'Glucose' ? 'ABNORMAL' : 'NORMAL');
-    }
-  };
-
   const handleUploadReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPatientId) return;
+    if (!selectedPatientId || !selectedOrderId || !selectedFile) return;
 
     setSubmitting(true);
     setSuccessMsg(null);
-
-    const testInfo = DEMO_TESTS[selectedTestKey] || { name: selectedTestKey };
+    setErrorMsg(null);
 
     try {
-      await api.createLabReport({
-        patient: Number(selectedPatientId),
-        laboratory_name: 'Apex Clinical Diagnostic Laboratory',
-        report_title: `${selectedTestKey} Diagnostic Analysis`,
-        specimen_type: selectedTestKey === 'CBC' ? 'Whole Blood (EDTA)' : 'Serum',
-        report_date: new Date().toISOString().split('T')[0],
-        status: resultStatus,
-        notes: notes,
-        results: [
-          {
-            test_name: testInfo.name,
-            value: Number(testResultVal),
-            unit: testUnit,
-            reference_range: referenceRange,
-            flag: resultStatus === 'CRITICAL' ? 'Critical' : resultStatus === 'ABNORMAL' ? 'High' : 'Normal',
-          },
-        ],
-      });
+      await api.uploadLabReport(Number(selectedPatientId), Number(selectedOrderId), selectedFile);
 
-      setSuccessMsg(`Report for ${testInfo.name} successfully submitted and linked to patient EHR.`);
+      setSuccessMsg(`Report successfully submitted, parsed, and linked to patient EHR.`);
       await loadData();
+      setSelectedOrderId('');
+      setSelectedFile(null);
       setActiveTab('dashboard');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to upload lab report:', err);
+      setErrorMsg(err.message || 'Failed to upload report. Please check the network tab.');
     } finally {
       setSubmitting(false);
     }
@@ -190,6 +147,15 @@ export const LabPortalPage: React.FC = () => {
           <div className="flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>{successMsg}</span>
+          </div>
+        </Alert>
+      )}
+      
+      {errorMsg && (
+        <Alert type="error">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>{errorMsg}</span>
           </div>
         </Alert>
       )}
@@ -312,7 +278,10 @@ export const LabPortalPage: React.FC = () => {
               </label>
               <select
                 value={selectedPatientId}
-                onChange={(e) => setSelectedPatientId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedPatientId(e.target.value);
+                  setSelectedOrderId('');
+                }}
                 className="w-full text-xs rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 required
               >
@@ -324,88 +293,60 @@ export const LabPortalPage: React.FC = () => {
               </select>
             </div>
 
-            {/* 2. Select Test (Demo tests: Glucose, HbA1c, Creatinine, Cholesterol, ALT, CBC) */}
+            {/* 2. Select Pending Order */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Select Test *
+                Select Pending Test Order *
               </label>
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                {Object.keys(DEMO_TESTS).map((testKey) => (
-                  <button
-                    key={testKey}
-                    type="button"
-                    onClick={() => handleTestSelectionChange(testKey)}
-                    className={`py-2 px-2 text-xs font-bold rounded-lg border text-center transition-colors cursor-pointer ${
-                      selectedTestKey === testKey
-                        ? 'bg-brand-600 text-white border-brand-600 shadow-xs'
-                        : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                    }`}
-                  >
-                    {testKey}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 3. Enter Result & Unit */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Result Value *"
-                type="number"
-                step="0.01"
-                value={testResultVal}
-                onChange={(e) => setTestResultVal(parseFloat(e.target.value) || 0)}
-                required
-              />
-
-              <Input
-                label="Unit *"
-                type="text"
-                value={testUnit}
-                onChange={(e) => setTestUnit(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 4. Reference Range & Status */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input
-                label="Reference Range *"
-                type="text"
-                value={referenceRange}
-                onChange={(e) => setReferenceRange(e.target.value)}
-                required
-              />
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Status *
-                </label>
-                <select
-                  value={resultStatus}
-                  onChange={(e) => setResultStatus(e.target.value as any)}
-                  className="w-full text-xs rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                >
-                  <option value="NORMAL">NORMAL</option>
-                  <option value="ABNORMAL">ABNORMAL</option>
-                  <option value="CRITICAL">CRITICAL</option>
-                </select>
-              </div>
-            </div>
-
-            {/* 5. Notes */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Clinical Notes
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
+              <select
+                value={selectedOrderId}
+                onChange={(e) => setSelectedOrderId(e.target.value)}
                 className="w-full text-xs rounded-lg border border-slate-300 p-2.5 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                placeholder="Observation notes, calibration status, or technician remarks..."
+                required
+                disabled={!selectedPatientId}
+              >
+                <option value="">-- Select an Order --</option>
+                {allOrders
+                  .filter((o) => o.patient === Number(selectedPatientId))
+                  .map((o) => (
+                    <option key={o.id} value={o.id}>
+                      Order #{o.id} - {o.items.map(i => i.test_name).join(', ')} (Ordered by {o.ordered_by_name})
+                    </option>
+                  ))}
+              </select>
+              {selectedPatientId && allOrders.filter(o => o.patient === Number(selectedPatientId)).length === 0 && (
+                <p className="text-[10px] text-amber-600 mt-1">This patient has no pending lab test orders.</p>
+              )}
+            </div>
+
+            {/* 3. Upload PDF */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Upload Diagnostic Report (PDF) *
+              </label>
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setSelectedFile(e.target.files[0]);
+                  } else {
+                    setSelectedFile(null);
+                  }
+                }}
+                className="w-full text-xs rounded-lg border border-slate-300 p-2 bg-white text-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 file:mr-4 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
+                required
               />
             </div>
+
+            <Alert type="info">
+              <div className="flex items-start gap-2">
+                <FileText className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
+                <span className="text-xs">
+                  Upon uploading, the system will automatically parse the PDF, extract relevant clinical conditions (e.g. Diabetes findings), and update the patient's EHR (Allergies & Medical Conditions) instantly.
+                </span>
+              </div>
+            </Alert>
 
             <div className="pt-2 flex items-center gap-3">
               <Button
@@ -413,8 +354,9 @@ export const LabPortalPage: React.FC = () => {
                 variant="primary"
                 size="md"
                 isLoading={submitting}
+                disabled={!selectedOrderId || !selectedFile}
               >
-                Submit Report to EHR
+                Submit & Parse Report
               </Button>
               <Button
                 type="button"

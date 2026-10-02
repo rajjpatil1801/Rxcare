@@ -184,3 +184,37 @@ class Consent(models.Model):
 
     def __str__(self):
         return f"Consent for {self.patient.full_name} -> {self.provider_name} [{self.status}]"
+
+
+class LabTestOrder(models.Model):
+    class Status(models.TextChoices):
+        ORDERED = 'ORDERED', 'Ordered'
+        IN_PROGRESS = 'IN_PROGRESS', 'In Progress'
+        COMPLETED = 'COMPLETED', 'Completed'
+        CANCELLED = 'CANCELLED', 'Cancelled'
+
+    patient = models.ForeignKey(PatientProfile, on_delete=models.CASCADE, related_name='lab_test_orders')
+    ordered_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ordered_lab_tests')
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.ORDERED)
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Lab Test Order for {self.patient.full_name} by {self.ordered_by.get_full_name()}"
+
+
+class LabTestOrderItem(models.Model):
+    order = models.ForeignKey(LabTestOrder, on_delete=models.CASCADE, related_name='items')
+    case_code = models.CharField(max_length=10)
+    test_name = models.CharField(max_length=200)
+    clinical_scenario = models.CharField(max_length=300)
+
+    class Meta:
+        ordering = ['case_code']
+
+    def __str__(self):
+        return f"{self.case_code} - {self.test_name}"

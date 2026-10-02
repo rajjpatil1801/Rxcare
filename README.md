@@ -60,6 +60,10 @@ The login system implements a two-screen, role-enforced authentication flow:
   - **Clinical Safety Warnings**: Allergy Conflict (Penicillin + Amoxicillin), Drug-Drug Interactions
   - **Recent Lab Trends Chart**: Glucose, HbA1c, Creatinine, Cholesterol tracking
   - Recent Prescriptions & Upcoming Appointments
+- **Advanced Clinical Prescribing**:
+  - **Diagnostic Lab Orders**: Doctor can order 20+ NABL standard diagnostic tests for patients directly from their profile.
+  - **Real-Time Safety Checker**: Dynamic, color-coded contraindication warnings (Critical/High/Caution) appear instantly when a dangerous medicine is selected during prescription creation.
+  - Contains **7 comprehensive disease-drug interaction categories** checking against 42 catalog drugs.
 
 ### Pharmacy Portal
 - **Navigation**: Dashboard, Verify Prescription, Inventory, Dispensing History
@@ -67,7 +71,7 @@ The login system implements a two-screen, role-enforced authentication flow:
   - Verify digital prescription via Prescription ID or QR scanner
   - Patient Spotlight & Medicines checklist (Dose, Quantity, Stock status)
   - Individual `[ Dispense ]` and `[ Dispense All ]` actions
-  - Instant confirmation: *"✓ Dispensing recorded successfully"*
+  - Instant confirmation: *"✅ Dispensing recorded successfully"*
   - Real-time stock decrement and status update (`VERIFIED` -> `DISPENSED`)
   - Inventory management with stock levels (`In Stock`, `Limited Stock`, `Out of Stock`)
 
@@ -76,6 +80,7 @@ The login system implements a two-screen, role-enforced authentication flow:
 - **Workflow**:
   - Vitals monitoring (BP, Heart Rate, Blood Sugar, BMI)
   - **MY HEALTH SUMMARY**: Conditions, allergies, current medicines, latest labs
+  - **Interactive Pharmacy Map Locator**: Click "Locate" on any prescription to open an interactive map (Leaflet) showing nearby pharmacies. It automatically checks real-time stock for the *entire* prescription, displaying which pharmacies have all medicines, partial stock, or are out of stock, along with an estimated total price.
   - My Prescriptions with interactive QR verification view and downloadable ReportLab PDF
   - Consent management: Grant / Revoke access for clinics, labs, and pharmacies
 
@@ -83,8 +88,8 @@ The login system implements a two-screen, role-enforced authentication flow:
 - **Navigation**: Dashboard, Patients, Upload Reports
 - **Workflow**:
   - Metrics: Reports Submitted, Pending Reports, Abnormal Results
-  - Upload diagnostic results (Fasting Glucose, HbA1c, Creatinine, Cholesterol, ALT, CBC)
-  - Automatic integration with patient Electronic Health Record (EHR)
+  - **Automated PDF Parsing**: Lab technicians can upload PDF lab reports fulfilling doctor orders. The system automatically scans the PDF and extracts critical findings (e.g., Cardiac Risk Markers) directly into the patient's EHR as documented alerts.
+  - Integration with patient Electronic Health Record (EHR) and Doctor's Lab Reports tab.
 
 ---
 

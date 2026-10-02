@@ -345,42 +345,109 @@ class DispensePrescriptionView(APIView):
 class PharmacySearchView(APIView):
     """
     Search nearby demo pharmacies with distance and medicine stock availability.
+    Supports: ?prescription_id=X (checks all medicines in that prescription)
+              ?medicine_id=X (single medicine lookup)
+              ?name=X (single medicine by name)
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         medicine_id = request.query_params.get('medicine_id')
         medicine_name = request.query_params.get('name', '')
+        prescription_id = request.query_params.get('prescription_id')
 
         pharmacies = Pharmacy.objects.all().order_by('distance_km')
         results = []
 
+        # If prescription_id is provided, get all medicine IDs from that prescription
+        prescribed_medicine_ids = []
+        prescribed_medicine_names = []
+        if prescription_id:
+            from pharmacy.models import PrescriptionMedicine
+            rx_items = PrescriptionMedicine.objects.filter(prescription_id=prescription_id).select_related('medicine')
+            for item in rx_items:
+                if item.medicine_id:
+                    prescribed_medicine_ids.append(item.medicine_id)
+                    prescribed_medicine_names.append({
+                        'id': item.medicine_id,
+                        'name': item.generic_name,
+                        'dosage': item.dosage
+                    })
+
         for p in pharmacies:
-            # Look up stock if medicine provided
-            stock_status = 'IN_STOCK'
-            unit_price = 45.00
-
-            if medicine_id:
-                inv = PharmacyInventory.objects.filter(pharmacy=p, medicine_id=medicine_id).first()
-                if inv:
-                    stock_status = inv.status
-                    unit_price = float(inv.unit_price)
-            elif medicine_name:
-                inv = PharmacyInventory.objects.filter(pharmacy=p, medicine__generic_name__icontains=medicine_name).first()
-                if inv:
-                    stock_status = inv.status
-                    unit_price = float(inv.unit_price)
-
-            results.append({
+            pharmacy_data = {
                 'id': p.id,
                 'name': p.name,
                 'address': p.address,
                 'phone': p.phone,
                 'distance_km': p.distance_km,
                 'rating': p.rating,
-                'stock_status': stock_status,
-                'unit_price': unit_price
-            })
+                'latitude': p.latitude,
+                'longitude': p.longitude,
+                'opening_hours': p.opening_hours,
+            }
+
+            if prescribed_medicine_ids:
+                # Multi-medicine check: build per-medicine availability
+                medicine_availability = []
+                available_count = 0
+                total_price = 0.0
+
+                for med_info in prescribed_medicine_names:
+                    inv = PharmacyInventory.objects.filter(
+                        pharmacy=p, medicine_id=med_info['id']
+                    ).first()
+                    if inv and inv.stock_quantity > 0:
+                        medicine_availability.append({
+                            'medicine_id': med_info['id'],
+                            'name': med_info['name'],
+                            'dosage': med_info['dosage'],
+                            'available': True,
+                            'stock_quantity': inv.stock_quantity,
+                            'status': inv.status,
+                            'unit_price': float(inv.unit_price),
+                        })
+                        available_count += 1
+                        total_price += float(inv.unit_price)
+                    else:
+                        medicine_availability.append({
+                            'medicine_id': med_info['id'],
+                            'name': med_info['name'],
+                            'dosage': med_info['dosage'],
+                            'available': False,
+                            'stock_quantity': 0,
+                            'status': 'OUT_OF_STOCK',
+                            'unit_price': 0,
+                        })
+
+                total_meds = len(prescribed_medicine_names)
+                pharmacy_data['medicine_availability'] = medicine_availability
+                pharmacy_data['available_count'] = available_count
+                pharmacy_data['total_medicines'] = total_meds
+                pharmacy_data['all_available'] = available_count == total_meds
+                pharmacy_data['total_estimated_price'] = round(total_price, 2)
+                pharmacy_data['stock_status'] = (
+                    'ALL_IN_STOCK' if available_count == total_meds
+                    else 'PARTIAL' if available_count > 0
+                    else 'NONE_AVAILABLE'
+                )
+            elif medicine_id:
+                inv = PharmacyInventory.objects.filter(pharmacy=p, medicine_id=medicine_id).first()
+                pharmacy_data['stock_status'] = inv.status if inv else 'OUT_OF_STOCK'
+                pharmacy_data['unit_price'] = float(inv.unit_price) if inv else 0
+                pharmacy_data['stock_quantity'] = inv.stock_quantity if inv else 0
+            elif medicine_name:
+                inv = PharmacyInventory.objects.filter(
+                    pharmacy=p, medicine__generic_name__icontains=medicine_name
+                ).first()
+                pharmacy_data['stock_status'] = inv.status if inv else 'OUT_OF_STOCK'
+                pharmacy_data['unit_price'] = float(inv.unit_price) if inv else 0
+                pharmacy_data['stock_quantity'] = inv.stock_quantity if inv else 0
+            else:
+                pharmacy_data['stock_status'] = 'IN_STOCK'
+                pharmacy_data['unit_price'] = 0
+
+            results.append(pharmacy_data)
 
         return Response(results)
 

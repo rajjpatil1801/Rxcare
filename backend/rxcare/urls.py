@@ -18,7 +18,7 @@ from clinical.views import (
     PatientViewSet, MedicalConditionViewSet, MedicalHistoryViewSet,
     AllergyViewSet, AdverseDrugReactionViewSet, VitalViewSet,
     LabReportViewSet, LabTrendsView, AppointmentViewSet, ConsentViewSet,
-    FHIRResourceView
+    LabTestOrderViewSet, FHIRResourceView
 )
 
 # Pharmacy views
@@ -46,6 +46,7 @@ router.register(r'vitals', VitalViewSet, basename='vital')
 router.register(r'lab-reports', LabReportViewSet, basename='lab-report')
 router.register(r'appointments', AppointmentViewSet, basename='appointment')
 router.register(r'consents', ConsentViewSet, basename='consent')
+router.register(r'lab-test-orders', LabTestOrderViewSet, basename='lab-test-order')
 
 # Pharmacy
 router.register(r'medicines', MedicineViewSet, basename='medicine')

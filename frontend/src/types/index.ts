@@ -253,6 +253,16 @@ export interface AIClinicalInsight {
   disclaimer: string;
 }
 
+export interface MedicineAvailability {
+  medicine_id: number;
+  name: string;
+  dosage: string;
+  available: boolean;
+  stock_quantity: number;
+  status: string;
+  unit_price: number;
+}
+
 export interface Pharmacy {
   id: number;
   name: string;
@@ -260,8 +270,16 @@ export interface Pharmacy {
   phone: string;
   distance_km: number;
   rating: number;
-  stock_status?: 'IN_STOCK' | 'LIMITED_STOCK' | 'OUT_OF_STOCK';
+  latitude?: number;
+  longitude?: number;
+  opening_hours?: string;
+  stock_status?: 'IN_STOCK' | 'LIMITED_STOCK' | 'OUT_OF_STOCK' | 'ALL_IN_STOCK' | 'PARTIAL' | 'NONE_AVAILABLE';
   unit_price?: number;
+  medicine_availability?: MedicineAvailability[];
+  available_count?: number;
+  total_medicines?: number;
+  all_available?: boolean;
+  total_estimated_price?: number;
 }
 
 export interface Appointment {
@@ -320,6 +338,26 @@ export interface AuditLogItem {
   resource_id: string;
   details: string;
   timestamp: string;
+}
+
+export interface LabTestOrderItem {
+  id: number;
+  case_code: string;
+  test_name: string;
+  clinical_scenario: string;
+}
+
+export interface LabTestOrder {
+  id: number;
+  patient: number;
+  patient_name: string;
+  ordered_by: number;
+  ordered_by_name: string;
+  status: 'ORDERED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  notes: string;
+  items: LabTestOrderItem[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface GlobalSearchResultItem {

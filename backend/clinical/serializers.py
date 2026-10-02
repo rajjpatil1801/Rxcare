@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     MedicalCondition, MedicalHistory, Allergy, AdverseDrugReaction,
-    Vital, LabReport, LabResult, Appointment, Consent
+    Vital, LabReport, LabResult, Appointment, Consent, LabTestOrder, LabTestOrderItem
 )
 from core.models import PatientProfile
 
@@ -93,3 +93,26 @@ class PatientProfileSerializer(serializers.ModelSerializer):
         if vital:
             return VitalSerializer(vital).data
         return None
+
+
+class LabTestOrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LabTestOrderItem
+        fields = '__all__'
+
+
+class LabTestOrderSerializer(serializers.ModelSerializer):
+    items = LabTestOrderItemSerializer(many=True, read_only=True)
+    ordered_by_name = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LabTestOrder
+        fields = ['id', 'patient', 'patient_name', 'ordered_by', 'ordered_by_name', 'status', 'notes', 'created_at', 'updated_at', 'items']
+        read_only_fields = ['ordered_by']
+
+    def get_ordered_by_name(self, obj):
+        return obj.ordered_by.get_full_name() if obj.ordered_by else ""
+
+    def get_patient_name(self, obj):
+        return obj.patient.full_name if obj.patient else ""
