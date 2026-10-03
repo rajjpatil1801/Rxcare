@@ -173,6 +173,11 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    if (selectedRole === 'PATIENT' && !/^\d{12}$/.test(regData.username.trim())) {
+      setError('Aadhar ID must be exactly 12 digits.');
+      return;
+    }
+
     try {
       const payload = {
         role: selectedRole,
@@ -467,11 +472,12 @@ export const LoginPage: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <Input
-                  label={`${roleInfo[selectedRole].title} ID`}
+                  label={selectedRole === 'PATIENT' ? 'Aadhar ID *' : `${roleInfo[selectedRole].title} ID`}
                   type="text"
                   value={regData.username}
                   onChange={(e) => setRegData({ ...regData, username: e.target.value })}
-                  placeholder={`Optional (Auto-generated)`}
+                  placeholder={selectedRole === 'PATIENT' ? '12-digit Aadhar (Required)' : 'Optional (Auto-generated)'}
+                  required={selectedRole === 'PATIENT'}
                 />
                 <Input
                   label="Phone"

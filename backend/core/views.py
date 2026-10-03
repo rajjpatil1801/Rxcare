@@ -128,7 +128,14 @@ class RegisterView(APIView):
         if not password or len(password) < 4:
             return Response({'error': 'Password must be at least 4 characters long.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Generate default username/ID if not provided
+        import re
+        if role == User.Role.PATIENT:
+            if not username:
+                return Response({'error': 'Aadhar ID is required for patient registration.'}, status=status.HTTP_400_BAD_REQUEST)
+            if not re.match(r'^\d{12}$', username):
+                return Response({'error': 'Aadhar ID must be exactly 12 digits.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate default username/ID if not provided for other roles
         if not username:
             if role == User.Role.DOCTOR:
                 count = DoctorProfile.objects.count() + 1001
