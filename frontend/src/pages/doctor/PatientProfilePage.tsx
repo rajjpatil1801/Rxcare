@@ -38,16 +38,27 @@ export const PatientProfilePage: React.FC = () => {
   const [vitalsSubmitting, setVitalsSubmitting] = useState(false);
   const [allergyForm, setAllergyForm] = useState({ substance: '', reaction: '', severity: 'HIGH' });
   const [conditionForm, setConditionForm] = useState({ condition_name: '', icd10_code: '', status: 'ACTIVE' });
-  const [vitalsForm, setVitalsForm] = useState({
-    blood_pressure_sys: 120,
-    blood_pressure_dia: 80,
-    heart_rate: 72,
-    blood_glucose: 110,
-    weight_kg: 74.5,
-    height_cm: 172,
-    bmi: 25.2,
-    temperature_f: 98.6,
-    spo2: 98,
+  const [vitalsForm, setVitalsForm] = useState<{
+    blood_pressure_sys: number | string;
+    blood_pressure_dia: number | string;
+    heart_rate: number | string;
+    blood_glucose: number | string;
+    weight_kg: number | string;
+    height_cm: number | string;
+    bmi: number | string;
+    temperature_f: number | string;
+    spo2: number | string;
+    notes: string;
+  }>({
+    blood_pressure_sys: '',
+    blood_pressure_dia: '',
+    heart_rate: '',
+    blood_glucose: '',
+    weight_kg: '',
+    height_cm: '',
+    bmi: '',
+    temperature_f: '',
+    spo2: '',
     notes: '',
   });
 
