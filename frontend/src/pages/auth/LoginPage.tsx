@@ -74,8 +74,8 @@ export const LoginPage: React.FC = () => {
     PATIENT: {
       title: 'Patient',
       loginTitle: 'PATIENT LOGIN',
-      idLabel: 'Patient ID / Email',
-      idPlaceholder: 'RX-PAT-1001 or patient@rxcare.demo',
+      idLabel: 'Aadhar ID / Email',
+      idPlaceholder: '987654321001 or patient@rxcare.demo',
       demoId: DEMO_CREDENTIALS.PATIENT.id,
       icon: <UserIcon className="w-6 h-6 text-emerald-600" />,
       color: 'text-emerald-700',

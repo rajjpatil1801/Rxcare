@@ -70,7 +70,7 @@ class Command(BaseCommand):
 
         # Patient User
         patient_user = User.objects.create_user(
-            username='RX-PAT-1001',
+            username='987654321001',
             email='patient@rxcare.demo',
             password='demo123',
             first_name='Rahul',
@@ -119,7 +119,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating 15 fictional patients...")
         patients_data = [
             {
-                "patient_id": "RX-PAT-1001",
+                "patient_id": "987654321001",
                 "user": patient_user,
                 "first_name": "Rahul",
                 "last_name": "Mehta",
@@ -145,7 +145,7 @@ class Command(BaseCommand):
                 ]
             },
             {
-                "patient_id": "RX-PAT-1002",
+                "patient_id": "987654321002",
                 "first_name": "Priya",
                 "last_name": "Sharma",
                 "email": "priya.sharma@example.demo",
@@ -168,7 +168,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1003",
+                "patient_id": "987654321003",
                 "first_name": "Amit",
                 "last_name": "Verma",
                 "email": "amit.verma@example.demo",
@@ -191,7 +191,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1004",
+                "patient_id": "987654321004",
                 "first_name": "Sunita",
                 "last_name": "Rao",
                 "email": "sunita.rao@example.demo",
@@ -214,7 +214,7 @@ class Command(BaseCommand):
                 ]
             },
             {
-                "patient_id": "RX-PAT-1005",
+                "patient_id": "987654321005",
                 "first_name": "Vikram",
                 "last_name": "Malhotra",
                 "email": "vikram.m@example.demo",
@@ -235,7 +235,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1006",
+                "patient_id": "987654321006",
                 "first_name": "Ananya",
                 "last_name": "Roy",
                 "email": "ananya.roy@example.demo",
@@ -257,7 +257,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1007",
+                "patient_id": "987654321007",
                 "first_name": "Rajesh",
                 "last_name": "Patel",
                 "email": "rajesh.patel@example.demo",
@@ -278,7 +278,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1008",
+                "patient_id": "987654321008",
                 "first_name": "Meera",
                 "last_name": "Nair",
                 "email": "meera.nair@example.demo",
@@ -299,7 +299,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1009",
+                "patient_id": "987654321009",
                 "first_name": "Suresh",
                 "last_name": "Kulkarni",
                 "email": "suresh.k@example.demo",
@@ -320,7 +320,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1010",
+                "patient_id": "987654321010",
                 "first_name": "Pooja",
                 "last_name": "Joshi",
                 "email": "pooja.j@example.demo",
@@ -341,7 +341,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1011",
+                "patient_id": "987654321011",
                 "first_name": "Deepak",
                 "last_name": "Gupta",
                 "email": "deepak.gupta@example.demo",
@@ -361,7 +361,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1012",
+                "patient_id": "987654321012",
                 "first_name": "Kavita",
                 "last_name": "Singh",
                 "email": "kavita.s@example.demo",
@@ -381,7 +381,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1013",
+                "patient_id": "987654321013",
                 "first_name": "Rakesh",
                 "last_name": "Agarwal",
                 "email": "rakesh.a@example.demo",
@@ -402,7 +402,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1014",
+                "patient_id": "987654321014",
                 "first_name": "Neha",
                 "last_name": "Saxena",
                 "email": "neha.saxena@example.demo",
@@ -422,7 +422,7 @@ class Command(BaseCommand):
                 "adrs": []
             },
             {
-                "patient_id": "RX-PAT-1015",
+                "patient_id": "987654321015",
                 "first_name": "Rohan",
                 "last_name": "Desai",
                 "email": "rohan.desai@example.demo",
@@ -502,7 +502,7 @@ class Command(BaseCommand):
             )
 
         # Special Medical History for Rahul Mehta (Demo Scenario)
-        rahul_patient = created_patients["RX-PAT-1001"]
+        rahul_patient = created_patients["987654321001"]
         MedicalHistory.objects.create(
             patient=rahul_patient,
             event_type=MedicalHistory.EventType.DIAGNOSIS,
@@ -980,7 +980,7 @@ class Command(BaseCommand):
         LabResult.objects.create(report=r3, test_name="Total Cholesterol", value=182.0, unit="mg/dL", reference_range="125 - 200", flag=LabResult.Flag.NORMAL)
 
         # Lab reports for other patients
-        for p_key in ["RX-PAT-1002", "RX-PAT-1003", "RX-PAT-1005", "RX-PAT-1007"]:
+        for p_key in ["987654321002", "987654321003", "987654321005", "987654321007"]:
             pt = created_patients[p_key]
             r = LabReport.objects.create(
                 patient=pt,
@@ -992,7 +992,7 @@ class Command(BaseCommand):
                 status=LabReport.Status.NORMAL
             )
             LabResult.objects.create(report=r, test_name="Fasting Blood Glucose", value=92.0, unit="mg/dL", reference_range="70 - 99", flag=LabResult.Flag.NORMAL)
-            LabResult.objects.create(report=r, test_name="Serum Creatinine", value=2.1 if p_key == "RX-PAT-1003" else 0.9, unit="mg/dL", reference_range="0.7 - 1.2", flag=LabResult.Flag.HIGH if p_key == "RX-PAT-1003" else LabResult.Flag.NORMAL)
+            LabResult.objects.create(report=r, test_name="Serum Creatinine", value=2.1 if p_key == "987654321003" else 0.9, unit="mg/dL", reference_range="0.7 - 1.2", flag=LabResult.Flag.HIGH if p_key == "987654321003" else LabResult.Flag.NORMAL)
             LabResult.objects.create(report=r, test_name="Total Cholesterol", value=178.0, unit="mg/dL", reference_range="125 - 200", flag=LabResult.Flag.NORMAL)
 
         # 8. Create Prescriptions across Lifecycle (Draft, Finalized, Verified, Dispensed)
@@ -1008,7 +1008,7 @@ class Command(BaseCommand):
             general_instructions="Maintain low carbohydrate diet, regular physical exercise 30 min daily. Keep blood sugar log.",
             follow_up_date=datetime.date(2024, 5, 20),
             status=Prescription.Status.DISPENSED,
-            qr_code_data=generate_qr_base64("RXCARE:VERIFY:RX20240218001:RX-PAT-1001"),
+            qr_code_data=generate_qr_base64("RXCARE:VERIFY:RX20240218001:987654321001"),
             created_at=timezone.now() - datetime.timedelta(days=35),
             finalized_at=timezone.now() - datetime.timedelta(days=35),
             dispensed_at=timezone.now() - datetime.timedelta(days=34)
@@ -1057,7 +1057,7 @@ class Command(BaseCommand):
             general_instructions="Take Atorvastatin at bedtime. Report any unusual bilateral muscle soreness.",
             follow_up_date=datetime.date(2024, 6, 20),
             status=Prescription.Status.FINALIZED,
-            qr_code_data=generate_qr_base64("RXCARE:VERIFY:RX20240322042:RX-PAT-1001"),
+            qr_code_data=generate_qr_base64("RXCARE:VERIFY:RX20240322042:987654321001"),
             created_at=timezone.now() - datetime.timedelta(hours=6),
             finalized_at=timezone.now() - datetime.timedelta(hours=6)
         )
@@ -1077,14 +1077,14 @@ class Command(BaseCommand):
 
         # C) More prescriptions for other patients across statuses
         other_rx_data = [
-            (created_patients["RX-PAT-1002"], "RX20240315003", Prescription.Status.DISPENSED, "Salbutamol Sulfate", "Asthalin", "100 mcg", "2 puffs PRN"),
-            (created_patients["RX-PAT-1003"], "RX20240318004", Prescription.Status.VERIFIED, "Lisinopril", "Zestril", "10 mg", "Once daily"),
-            (created_patients["RX-PAT-1004"], "RX20240319005", Prescription.Status.PARTIALLY_DISPENSED, "Pantoprazole Sodium", "Pan 40", "40 mg", "Once daily before breakfast"),
-            (created_patients["RX-PAT-1005"], "RX20240320006", Prescription.Status.DRAFT, "Clopidogrel Bisulfate", "Plavix", "75 mg", "Once daily with food"),
-            (created_patients["RX-PAT-1006"], "RX20240321007", Prescription.Status.FINALIZED, "Paracetamol", "Calpol", "650 mg", "TID as needed"),
-            (created_patients["RX-PAT-1007"], "RX20240322008", Prescription.Status.FINALIZED, "Glimepiride", "Amaryl", "2 mg", "Once daily with breakfast"),
-            (created_patients["RX-PAT-1008"], "RX20240323009", Prescription.Status.DRAFT, "Levothyroxine Sodium", "Thyronorm", "50 mcg", "Once daily empty stomach"),
-            (created_patients["RX-PAT-1009"], "RX20240324010", Prescription.Status.DISPENSED, "Paracetamol", "Calpol", "650 mg", "SOS for pain")
+            (created_patients["987654321002"], "RX20240315003", Prescription.Status.DISPENSED, "Salbutamol Sulfate", "Asthalin", "100 mcg", "2 puffs PRN"),
+            (created_patients["987654321003"], "RX20240318004", Prescription.Status.VERIFIED, "Lisinopril", "Zestril", "10 mg", "Once daily"),
+            (created_patients["987654321004"], "RX20240319005", Prescription.Status.PARTIALLY_DISPENSED, "Pantoprazole Sodium", "Pan 40", "40 mg", "Once daily before breakfast"),
+            (created_patients["987654321005"], "RX20240320006", Prescription.Status.DRAFT, "Clopidogrel Bisulfate", "Plavix", "75 mg", "Once daily with food"),
+            (created_patients["987654321006"], "RX20240321007", Prescription.Status.FINALIZED, "Paracetamol", "Calpol", "650 mg", "TID as needed"),
+            (created_patients["987654321007"], "RX20240322008", Prescription.Status.FINALIZED, "Glimepiride", "Amaryl", "2 mg", "Once daily with breakfast"),
+            (created_patients["987654321008"], "RX20240323009", Prescription.Status.DRAFT, "Levothyroxine Sodium", "Thyronorm", "50 mcg", "Once daily empty stomach"),
+            (created_patients["987654321009"], "RX20240324010", Prescription.Status.DISPENSED, "Paracetamol", "Calpol", "650 mg", "SOS for pain")
         ]
 
         for pt, code, st, med_name, b_name, dose, freq in other_rx_data:
@@ -1127,7 +1127,7 @@ class Command(BaseCommand):
         )
         Appointment.objects.create(
             doctor=doctor_user,
-            patient=created_patients["RX-PAT-1002"],
+            patient=created_patients["987654321002"],
             scheduled_time=tomorrow.replace(hour=11, minute=15, second=0),
             appointment_type="Respiratory Review & Spirometry",
             status=Appointment.Status.SCHEDULED,
@@ -1135,7 +1135,7 @@ class Command(BaseCommand):
         )
         Appointment.objects.create(
             doctor=doctor_user,
-            patient=created_patients["RX-PAT-1003"],
+            patient=created_patients["987654321003"],
             scheduled_time=next_week.replace(hour=14, minute=0, second=0),
             appointment_type="Renal Function Assessment",
             status=Appointment.Status.SCHEDULED,
@@ -1220,7 +1220,7 @@ class Command(BaseCommand):
         self.stdout.write("Creating audit log trail...")
         audit_events = [
             (doctor_user, "DOCTOR", "Doctor logged in", "Authentication", "1", "User session initiated"),
-            (doctor_user, "DOCTOR", "Doctor viewed patient chart", "Patient", "RX-PAT-1001", "Accessed chart for Rahul Mehta"),
+            (doctor_user, "DOCTOR", "Doctor viewed patient chart", "Patient", "987654321001", "Accessed chart for Rahul Mehta"),
             (lab_user, "LABORATORY", "Lab report uploaded", "LabReport", "3", "Uploaded Annual Routine Health Check & Renal Function"),
             (doctor_user, "DOCTOR", "Prescription created (Draft)", "Prescription", "RX20240322042", "Drafted prescription with Atorvastatin 20mg"),
             (doctor_user, "DOCTOR", "Prescription finalized & signed", "Prescription", "RX20240322042", "Digital cryptographic signature and QR code generated"),

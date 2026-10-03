@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const DEMO_CREDENTIALS = {
   DOCTOR: { id: 'DR-1001', email: 'doctor@rxcare.demo', password: 'demo123', label: 'Doctor (Dr. Rahul Mehta)' },
-  PATIENT: { id: 'RX-PAT-1001', email: 'patient@rxcare.demo', password: 'demo123', label: 'Patient (Rahul Mehta)' },
+  PATIENT: { id: '987654321001', email: 'patient@rxcare.demo', password: 'demo123', label: 'Patient (Rahul Mehta)' },
   LABORATORY: { id: 'LAB-1001', email: 'lab@rxcare.demo', password: 'demo123', label: 'Laboratory (Apex Diagnostics)' },
   PHARMACY: { id: 'PHARM-1001', email: 'pharmacy@rxcare.demo', password: 'demo123', label: 'Pharmacy (Apollo Care)' },
 };

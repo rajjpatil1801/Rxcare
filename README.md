@@ -42,7 +42,7 @@ The login system implements a two-screen, role-enforced authentication flow:
 | Role | Login ID / Username | Email | Password | Primary Interface |
 | :--- | :--- | :--- | :--- | :--- |
 | **Doctor** | `DR-1001` | `doctor@rxcare.demo` | `demo123` | `/doctor/dashboard` |
-| **Patient** | `RX-PAT-1001` | `patient@rxcare.demo` | `demo123` | `/patient/dashboard` |
+| **Patient** | `987654321001` | `patient@rxcare.demo` | `demo123` | `/patient/dashboard` |
 | **Laboratory** | `LAB-1001` | `lab@rxcare.demo` | `demo123` | `/lab` |
 | **Pharmacy** | `PHARM-1001` | `pharmacy@rxcare.demo` | `demo123` | `/pharmacy` |
 
@@ -56,7 +56,7 @@ The login system implements a two-screen, role-enforced authentication flow:
 - **Dashboard Highlights**:
   - Header: *"Good Morning, Dr. Rahul Mehta"* — *"15 patients assigned today"*
   - Statistics: Total Patients, Active Prescriptions, Lab Reports, Safety Alerts
-  - **Patient Clinical Spotlight**: Rahul Mehta (`RX-PAT-1001`), Age 42, Male, Type 2 Diabetes, Hypertension, Penicillin Allergy (HIGH), Vitals & BMI
+  - **Patient Clinical Spotlight**: Rahul Mehta (`987654321001`), Age 42, Male, Type 2 Diabetes, Hypertension, Penicillin Allergy (HIGH), Vitals & BMI
   - **Clinical Safety Warnings**: Allergy Conflict (Penicillin + Amoxicillin), Drug-Drug Interactions
   - **Recent Lab Trends Chart**: Glucose, HbA1c, Creatinine, Cholesterol tracking
   - Recent Prescriptions & Upcoming Appointments
@@ -128,7 +128,7 @@ ROLE SELECTION
        ↓
 DOCTOR LOGIN (DR-1001 / demo123)
        ↓
-DOCTOR DASHBOARD (Patient Spotlight: Rahul Mehta RX-PAT-1001)
+DOCTOR DASHBOARD (Patient Spotlight: Rahul Mehta 987654321001)
        ↓
 + CREATE PRESCRIPTION
        ↓
@@ -148,7 +148,7 @@ VERIFY DIGITAL PRESCRIPTION (QR / ID lookup)
        ↓
 CHECK INVENTORY & DISPENSE MEDICINE ("✓ Dispensing recorded successfully")
        ↓
-PATIENT LOGIN (RX-PAT-1001 / demo123)
+PATIENT LOGIN (987654321001 / demo123)
        ↓
 VIEW DISPENSED PRESCRIPTION (QR & PDF available)
 ```

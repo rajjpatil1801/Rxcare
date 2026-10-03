@@ -205,8 +205,8 @@ export const CreatePrescriptionPage: React.FC = () => {
           const match = patList.find((p) => p.id === Number(patientIdParam));
           if (match) setSelectedPatient(match);
         } else {
-          // Default to Rahul Mehta (RX-PAT-1001) for best demo scenario
-          const rahul = patList.find((p) => p.patient_id === 'RX-PAT-1001') || patList[0];
+          // Default to Rahul Mehta (987654321001) for best demo scenario
+          const rahul = patList.find((p) => p.patient_id === '987654321001') || patList[0];
           if (rahul) setSelectedPatient(rahul);
         }
       } catch (err) {
@@ -481,7 +481,7 @@ export const CreatePrescriptionPage: React.FC = () => {
                   type="text"
                   value={patientSearch}
                   onChange={(e) => setPatientSearch(e.target.value)}
-                  placeholder="Search by patient name or ID (e.g., Rahul Mehta, RX-PAT-1001)..."
+                  placeholder="Search by patient name or ID (e.g., Rahul Mehta, 987654321001)..."
                   className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                 />
               </div>

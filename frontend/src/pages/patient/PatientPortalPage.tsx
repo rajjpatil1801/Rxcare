@@ -53,7 +53,7 @@ export const PatientPortalPage: React.FC = () => {
     setLoading(true);
     try {
       const patientsList = await api.getPatients();
-      // Match current user or fallback to Rahul Mehta (RX-PAT-1001)
+      // Match current user or fallback to Rahul Mehta (987654321001)
       const currentPat =
         patientsList.find((p) => p.email === user?.email || p.patient_id === user?.username) ||
         patientsList[0];
@@ -138,7 +138,7 @@ export const PatientPortalPage: React.FC = () => {
             {patient?.full_name || 'Rahul Mehta'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Patient ID: <span className="font-mono font-semibold text-slate-800">{patient?.patient_id || 'RX-PAT-1001'}</span>
+            Aadhar ID: <span className="font-mono font-semibold text-slate-800">{patient?.patient_id || '987654321001'}</span>
           </p>
         </div>
 

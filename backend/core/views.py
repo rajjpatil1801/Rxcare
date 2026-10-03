@@ -135,7 +135,7 @@ class RegisterView(APIView):
                 username = f"DR-{count}"
             elif role == User.Role.PATIENT:
                 count = PatientProfile.objects.count() + 1001
-                username = f"RX-PAT-{count}"
+                username = f"98765432{count}"
             elif role == User.Role.LABORATORY:
                 count = LaboratoryProfile.objects.count() + 1001
                 username = f"LAB-{count}"
@@ -172,7 +172,7 @@ class RegisterView(APIView):
                 experience_years=int(data.get('experience_years', 5))
             )
         elif role == User.Role.PATIENT:
-            patient_id = username if username.startswith('RX-PAT-') else f"RX-PAT-{PatientProfile.objects.count() + 1001}"
+            patient_id = username if username.startswith('98765432') else f"98765432{PatientProfile.objects.count() + 1001}"
             PatientProfile.objects.create(
                 user=user,
                 patient_id=patient_id,

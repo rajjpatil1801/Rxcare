@@ -34,8 +34,8 @@ export const DoctorDashboard: React.FC = () => {
         ]);
 
         setPatients(patientsRes);
-        // Default select Rahul Mehta (RX-PAT-1001)
-        const rahul = patientsRes.find((p) => p.patient_id === 'RX-PAT-1001') || patientsRes[0] || null;
+        // Default select Rahul Mehta (987654321001)
+        const rahul = patientsRes.find((p) => p.patient_id === '987654321001') || patientsRes[0] || null;
         setSelectedPatient(rahul);
         setPrescriptions(rxRes.slice(0, 5));
         setAppointments(apptRes.slice(0, 4));
@@ -169,7 +169,7 @@ export const DoctorDashboard: React.FC = () => {
                 <h3 className="text-lg font-bold text-slate-900">
                   {selectedPatient ? selectedPatient.full_name : 'Rahul Mehta'}
                   <span className="text-xs font-mono font-normal text-slate-500 ml-2">
-                    ({selectedPatient?.patient_id || 'RX-PAT-1001'})
+                    ({selectedPatient?.patient_id || '987654321001'})
                   </span>
                 </h3>
               </div>

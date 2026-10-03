@@ -241,8 +241,8 @@ export const PharmacyDashboard: React.FC = () => {
               <span className="font-bold text-slate-900">{prescription.patient_name || 'Rahul Mehta'}</span>
             </div>
             <div>
-              <span className="text-slate-400 text-[10px] font-bold uppercase block">Patient ID</span>
-              <span className="font-mono font-bold text-slate-800">{prescription.patient_code || 'RX-PAT-1001'}</span>
+              <span className="text-slate-400 text-[10px] font-bold uppercase block">Aadhar ID</span>
+              <span className="font-mono font-bold text-slate-800">{prescription.patient_code || '987654321001'}</span>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] font-bold uppercase block">Doctor</span>

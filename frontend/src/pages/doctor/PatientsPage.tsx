@@ -113,7 +113,7 @@ export const PatientsPage: React.FC = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by patient name, Patient ID (RX-PAT-...), or phone number..."
+              placeholder="Search by patient name, Aadhar ID (98765432...), or phone number..."
               className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500"
             />
           </div>
@@ -133,7 +133,7 @@ export const PatientsPage: React.FC = () => {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-100 text-slate-700 font-semibold">
                 <th className="py-2.5 px-4">Name</th>
-                <th className="py-2.5 px-4">Patient ID</th>
+                <th className="py-2.5 px-4">Aadhar ID</th>
                 <th className="py-2.5 px-4">Age</th>
                 <th className="py-2.5 px-4">Gender</th>
                 <th className="py-2.5 px-4">Last Visit</th>
@@ -174,7 +174,7 @@ export const PatientsPage: React.FC = () => {
                       {p.gender}
                     </td>
                     <td className="py-3 px-4 text-slate-600">
-                      {p.patient_id === 'RX-PAT-1001' ? 'Today' : '18 Sep 2026'}
+                      {p.patient_id === '987654321001' ? 'Today' : '18 Sep 2026'}
                     </td>
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">

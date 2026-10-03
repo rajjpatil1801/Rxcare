@@ -62,7 +62,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         # Auto-generate unique patient ID if not provided
         last_patient = PatientProfile.objects.order_by('-id').first()
         next_num = 1001 if not last_patient else (last_patient.id + 1001)
-        patient_id = f"RX-PAT-{next_num}"
+        patient_id = f"98765432{next_num}"
         patient = serializer.save(patient_id=patient_id)
 
         AuditLog.objects.create(
