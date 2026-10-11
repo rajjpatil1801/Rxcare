@@ -3,9 +3,18 @@ RxCare Root URL Configuration
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
+
+def api_root_health(request):
+    return JsonResponse({
+        "status": "online",
+        "service": "UniCare Clinical Platform Backend API",
+        "version": "1.0.0",
+        "api_root": "/api/"
+    })
 
 # Core views
 from core.views import (
@@ -57,6 +66,7 @@ router.register(r'dispensing-records', DispensingRecordViewSet, basename='dispen
 
 
 urlpatterns = [
+    path('', api_root_health, name='api-root-health'),
     path('admin/', admin.site.urls),
 
     # Authentication
