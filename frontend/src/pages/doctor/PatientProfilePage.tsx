@@ -182,10 +182,12 @@ export const PatientProfilePage: React.FC = () => {
     }
   }, [patient]);
 
-  const handleBiometricsChange = (wt: number, ht: number) => {
+  const handleBiometricsChange = (wt: number | string, ht: number | string) => {
+    const numWt = Number(wt) || 0;
+    const numHt = Number(ht) || 0;
     let computedBmi = vitalsForm.bmi;
-    if (ht > 0 && wt > 0) {
-      computedBmi = Number((wt / ((ht / 100) * (ht / 100))).toFixed(1));
+    if (numHt > 0 && numWt > 0) {
+      computedBmi = Number((numWt / ((numHt / 100) * (numHt / 100))).toFixed(1));
     }
     setVitalsForm((prev) => ({
       ...prev,
